@@ -72,7 +72,7 @@ namespace WorkerService_Broker
 
             if (String.IsNullOrEmpty(result)) 
             {
-                _logger.LogError($"Broken message received. Data dump: {result}");
+                _logger.LogError($"Empty message received.");
                 return;
             }
 

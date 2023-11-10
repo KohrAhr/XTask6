@@ -51,6 +51,12 @@ namespace Lib.CommonFunctions
 
         public bool FileIsAccessible(string aFilePath, int aMaxWaitTime = 120000, int aSleepBetweenAttempt = 500)
         {
+            if (!File.Exists(aFilePath)) 
+            {
+                _logger.LogInformation($"File \"{aFilePath}\" does not exist.");
+                return false;
+            }
+            
             // Record the start time
             DateTime startTime = DateTime.Now;
 
@@ -64,7 +70,7 @@ namespace Lib.CommonFunctions
                         return true;
                     }
                 }
-                catch (IOException)
+                catch (IOException ex)
                 {
                     // File is not yet accessible
 
