@@ -6,11 +6,13 @@
 
         public static string QueueServer { get; set; } = "localhost";
 
-        public static int MaxCountOfProceedProcesses { get; set; } = 5;
+        public static string ConnectionString { get; set; } = string.Empty;
+
+///        public static int MaxCountOfProceedProcesses { get; set; } = 5;
 
         /// <summary>
         ///     value from AssignToObserver
         /// </summary>
-        public static int ScopeOfFolders { get; set; } = 35;
+        public static int ScopeOfFolders { get; set; } = 1;
     }
 }

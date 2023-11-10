@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.13" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
@@ -21,5 +22,9 @@
     <ProjectReference Include="..\Lib.CommonFunctions\Lib.CommonFunctions.csproj" />
     <ProjectReference Include="..\Lib.DataTypes\Lib.DataTypes.csproj" />
     <ProjectReference Include="..\Lib.RabbitMQ\Lib.RabbitMQ.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
   </ItemGroup>
 </Project>

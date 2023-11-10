@@ -27,17 +27,11 @@ namespace WorkerService_Observer.Functions
             // #2
             AppData.QueueServer = commonFunctions.ReadCriticalParameter(config, "QueueServer");
 
-            // #3
-            int lResult;
+            AppData.ConnectionString = commonFunctions.ReadCriticalParameter(config, "ConnectionString");
 
-            string? lValue = config["MaxCountOfProceedProcesses"];
+            AppData.ScopeOfFolders = commonFunctions.ReadIntParameter(config, "ScopeOfFolders");
 
-            if (!int.TryParse(lValue, out lResult))
-            {
-                lResult = 5;
-            }
-
-            AppData.MaxCountOfProceedProcesses = lResult;
+//            AppData.MaxCountOfProceedProcesses = commonFunctions.ReadIntParameter(config, "MaxCountOfProceedProcesses");
         }
     }
 }
