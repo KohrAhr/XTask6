@@ -1,0 +1,11 @@
+﻿{
+  "profiles": {
+    "WorkerService_Broker": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
