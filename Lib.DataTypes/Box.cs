@@ -4,7 +4,7 @@
     {
         public string SupplierIdentifier { get; set; } = string.Empty;
         public string Identifier { get; set; } = string.Empty;
-        public IReadOnlyCollection<Content> Contents { get; set; } = new List<Content>();
+        public IList<Content> Contents { get; set; } = new List<Content>();
 
         public class Content
         {
