@@ -85,12 +85,12 @@ namespace WorkerService_Broker
             }
 
             // Run Executor for file
-            _logger.LogInformation($"File is available {message.FileName}.");
+            _logger.LogInformation($"File is available \"{message.FileName}\". Id {message.TrackFileId}");
 
             // Start the other WorkerService.
             IWorkerExecutor otherWorker = _executorHost.Services.GetRequiredService<IWorkerExecutor>();
             _ = Task.Run(
-                () => otherWorker.StartWithParametersAsync(message.FileName, new CancellationToken())
+                () => otherWorker.StartWithParametersAsync(message, new CancellationToken())
             );
         }
 
@@ -106,7 +106,7 @@ namespace WorkerService_Broker
 //                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
                 try
                 {
-                    await Task.Delay(AppData.DelayInSeconds * 1000, stoppingToken);
+                    await Task.Delay(1000, stoppingToken);
                 }
                 catch (TaskCanceledException ex) 
                 {

@@ -6,7 +6,8 @@ using RabbitMQ.Client;
 using WorkerService_Observer.Core;
 using WorkerService_Observer.EF;
 using WorkerService_Observer.Functions;
-using WorkerService_Observer.EF.Types;
+using Lib.DataTypes.EF;
+using System.IO;
 
 namespace WorkerService_Observer
 {
@@ -15,6 +16,11 @@ namespace WorkerService_Observer
         private readonly ILogger<WorkerObserver> _logger;
 
         private IRabbitMQHelper rabbitMQHelper;
+
+        /// <summary>
+        ///     List of folders we are observe
+        /// </summary>
+        private List<FileSystemWatcher> fileSystemWatchers = new List<FileSystemWatcher>();
 
         #region RabbitMQ
         private ConnectionFactory? factory = null;
@@ -47,7 +53,10 @@ namespace WorkerService_Observer
             rabbitMQHelper.InitRabbitMQ(AppData.QueueServer, AppData.QueuePath, out factory, out connection, out channel);
 
             // Load settings from db
-            _logger.LogInformation("Watcher is initializing");
+            _logger.LogInformation(
+                $"Watcher is initializing for Scope Of with Folders with Id {AppData.ScopeOfFolders}. MQ Server is {AppData.QueueServer}. Pipeline is {AppData.QueuePath}. " +
+                $"Event Recycler, helpful when one instance handling multiply folders, set to {AppData.EventRecycler} seconds"
+            );
 
             IList<Config_Folders>? folders = null;
             try
@@ -88,6 +97,13 @@ namespace WorkerService_Observer
             return ExecuteAsync(cancellationToken);
         }
 
+
+
+        // If the FileSystemWatcher initially works and then stops capturing events for some folders, a few common reasons could cause this behavior:
+        // Buffer Overflow: The buffer of the FileSystemWatcher might overflow if too many events occur within a short period. This could lead to missing subsequent events.
+        // Rate of Change: If the rate of file changes in those folders is very high, the FileSystemWatcher might miss events due to the speed at which it processes event
+        // Reassigning Event Handlers: Reassigning event handlers or enabling/disabling the FileSystemWatcher frequently could cause it to miss events.
+
         /// <summary>
         ///     Setup folder watcher
         /// </summary>
@@ -112,6 +128,9 @@ namespace WorkerService_Observer
                 
                 // Enable raising events after(!) setting up the event handlers
                 fileWatcher.EnableRaisingEvents = true;
+
+                // !
+                fileSystemWatchers.Add(fileWatcher);
 
                 _logger.LogInformation($"Watcher for folder \"{aPath}\" created. File mask: \"{aFileMask}\"");
 
@@ -147,7 +166,7 @@ namespace WorkerService_Observer
                 return;
             }
 
-            // TODO: Make sure its not proceeded yet
+            // Make sure its not proceeded yet
             // Should we make assumption that all file names are unique?
             // Need to clarify specification from BA
             using (AppDbContext context = new AppDbContext())
@@ -172,14 +191,7 @@ namespace WorkerService_Observer
                 FileName = aFile
             };
 
-            // Send message to MSMQ/RabbitMQ
-            string rawMessage = JsonConvert.SerializeObject(message);
-            rabbitMQHelper?.SendMessage(channel, AppData.QueuePath, rawMessage);
-
-            //
-            _logger.LogInformation($"New incomming file \"{message.FileName}\" at {DateTime.Now}");
-
-            // Add entry into db table Files if succedded with MSMQ
+            // Add entry into db table Files
             TrackLog_Files trackLog_Files = new TrackLog_Files();
             trackLog_Files.FileFullPath = aFile;
 
@@ -188,6 +200,16 @@ namespace WorkerService_Observer
                 context.TrackLog_Files.Add(trackLog_Files);
                 context.SaveChanges();
             }
+
+            message.TrackFileId = trackLog_Files.TrackFileId;
+
+            _logger.LogInformation($"New incomming file \"{message.FileName}\" at {DateTime.Now} with Id {message.TrackFileId}");
+
+
+            // Send message to MSMQ/RabbitMQ
+            string rawMessage = JsonConvert.SerializeObject(message);
+            rabbitMQHelper?.SendMessage(channel, AppData.QueuePath, rawMessage);
+
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -196,9 +218,18 @@ namespace WorkerService_Observer
             {
 //                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
 
+                // Self repair ? or to overflow ?
+
+                // Recycle events?
+                foreach (FileSystemWatcher watcher in fileSystemWatchers)
+                {
+                    watcher.EnableRaisingEvents = false;
+                    watcher.EnableRaisingEvents = true;
+                }
+
                 try
                 {
-                    await Task.Delay(1000, stoppingToken);
+                    await Task.Delay(AppData.EventRecycler * 1000, stoppingToken);
                 }
                 catch (TaskCanceledException ex)
                 {

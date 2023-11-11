@@ -1,13 +1,14 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using WorkerService_Observer.Core;
+using WorkerService_Executor.Core;
 using Lib.DataTypes.EF;
 
-namespace WorkerService_Observer.EF
+namespace WorkerService_Executor.EF
 {
     public class AppDbContext : DbContext
     {
-        public DbSet<Config_Folders> Config_Folders { get; set; }
         public DbSet<TrackLog_Files> TrackLog_Files { get; set; }
+        public DbSet<Data_Identifiers> Data_Identifiers { get; set; }
+        public DbSet<Data_IdentifiersDetails> Data_IdentifiersDetails { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

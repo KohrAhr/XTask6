@@ -31,6 +31,8 @@ namespace WorkerService_Observer.Functions
 
             AppData.ScopeOfFolders = commonFunctions.ReadIntParameter(config, "ScopeOfFolders");
 
+            AppData.EventRecycler = commonFunctions.ReadIntParameter(config, "EventRecycler", 30);
+
 //            AppData.MaxCountOfProceedProcesses = commonFunctions.ReadIntParameter(config, "MaxCountOfProceedProcesses");
         }
     }

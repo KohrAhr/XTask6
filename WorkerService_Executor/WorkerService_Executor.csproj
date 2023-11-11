@@ -8,11 +8,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.13" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Lib.CommonFunctions\Lib.CommonFunctions.csproj" />
     <ProjectReference Include="..\Lib.DataTypes\Lib.DataTypes.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Core\" />
   </ItemGroup>
 </Project>

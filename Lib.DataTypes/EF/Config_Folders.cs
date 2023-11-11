@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace WorkerService_Observer.EF.Types
+namespace Lib.DataTypes.EF
 {
     public class Config_Folders
     {

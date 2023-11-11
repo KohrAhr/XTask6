@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace WorkerService_Observer.EF.Types
+namespace Lib.DataTypes.EF
 {
     public class TrackLog_Files
     {
@@ -14,10 +14,6 @@ namespace WorkerService_Observer.EF.Types
         public Int64 EntriesInFilesOK { get; set; }
         public Int64 EntriesInFilesFailed { get; set; }
 
-        /// <summary>
-        ///     Reserved ?
-        /// </summary>
-        public Int64? FileSize { get; set; }
         public bool? OverallSuccessStatus { get; set; }
 
         [MaxLength(500)]

@@ -1,4 +1,6 @@
 using Lib.DataTypes;
+using Lib.DataTypes.EF;
+using WorkerService_Executor.EF;
 using WorkerService_Executor.Functions;
 using WorkerService_Executor.Interfaces;
 
@@ -14,28 +16,79 @@ namespace WorkerService_Executor
             _logger = logger;
 
             parseHelper = new ParseHelper(_logger);
+
+            // Load settings
+            new Settings(_logger).ProceedConfigFile();
         }
 
-        public void StartWithParametersAsync(string aFileName, CancellationToken cancellationToken)
+        public void StartWithParametersAsync(Message aMessage, CancellationToken cancellationToken)
         {
-            _logger.LogInformation($"WorkerExecutor started with parameters: aFileName={aFileName}");
+            //
+            _logger.LogInformation($"WorkerExecutor started with parameters: FileName {aMessage.FileName}. Id {aMessage.TrackFileId}");
 
-            _logger.LogInformation($"Start with file \"{aFileName}\" at {DateTime.Now}");
+            _logger.LogInformation($"Start with file \"{aMessage.FileName}\" at {DateTime.Now}");
 
-            // Update db
-            //  Update Start Proceed Time
+            // Run
+            DataFileResult? dataFileResult = null;
+
+            // Update db -- Update Start Proceed Time
+            // After first usage we we get Id
+            TrackLog_Files? file;
+            using (AppDbContext context = new AppDbContext())
+            {
+                file = context.TrackLog_Files.Where(x => x.TrackFileId == aMessage.TrackFileId && x.FileStartProceedTime == null).FirstOrDefault();
+
+                if (file == null) 
+                {
+                    _logger.LogError($"Entry not found in TrackLog_Files table! File name \"{aMessage.FileName}\". Id {aMessage.TrackFileId}. 1st update");
+                    return;
+                }
+
+                file.FileStartProceedTime = DateTime.Now;
+
+                context.SaveChanges();
+            }
 
             // Proceed file
-            DataFileResult dataFileResult = parseHelper.ProceedDataFile(aFileName);
+            try
+            {
+                dataFileResult = parseHelper.ProceedDataFile(aMessage.FileName, aMessage.TrackFileId);
+            }
+            finally
+            {
+                if (dataFileResult != null)
+                {
+                    // Update db
+                    // Update # of Files OK
+                    // Update # of Files Failed
+                    // Update overall status
 
-            // Update db
-                // Update # of Files OK
-                // Update # of Files Failed
-                // Update overall status
+                    // Update End Proceed Time
+                    using (AppDbContext context = new AppDbContext())
+                    {
+                        // Ok, now we know Id and can use it
+                        file = context.TrackLog_Files.Where(x => x.TrackFileId == file.TrackFileId && x.FileStartProceedTime != null && x.FileFinishProceedTime == null).FirstOrDefault();
 
-                // Update End Proceed Time
+                        if (file == null)
+                        {
+                            _logger.LogError($"Entry not found in TrackLog_Files table! File name \"{aMessage.FileName}\". Id {aMessage.TrackFileId}. 2nd update");
+                        }
+                        else
+                        {
+                            file.ErrorMessage = dataFileResult.ErrorMessaget;
+                            file.EntriesInFilesOK = dataFileResult.EntriesInFilesOK;
+                            file.EntriesInFilesFailed = dataFileResult.EntriesInFilesFailed;
+                            file.OverallSuccessStatus = dataFileResult.Suceeded;
 
-            _logger.LogInformation($"Ended with file \"{aFileName}\". Proceeded records: {dataFileResult.EntriesInFilesOK}. Failed records: {dataFileResult.EntriesInFilesFailed}. Overall status: {dataFileResult.Suceeded}");
+                            file.FileFinishProceedTime = DateTime.Now;
+                            context.SaveChanges();
+                        }
+                    }
+                }
+            }
+
+            // End
+            _logger.LogInformation($"Ended with file \"{aMessage.FileName}\". Id {aMessage.TrackFileId}. Proceeded records: {dataFileResult.EntriesInFilesOK}. Failed records: {dataFileResult.EntriesInFilesFailed}. Overall status: {dataFileResult.Suceeded}");
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

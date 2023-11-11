@@ -4,9 +4,10 @@
     {
         public string FileName { get; set; } = string.Empty;
 
-        /// <summary>
-        ///     Not in use. Reserved for future.
-        /// </summary>
-//        public int Executor {  get; set; }
+        // We can use only FileName
+        public Int64 TrackFileId { get; set; }
+
+        // Ok, specification how to parse
+//        public Int64 FolderId { get; set;}
     }
 }

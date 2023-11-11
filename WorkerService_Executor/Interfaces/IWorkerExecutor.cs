@@ -1,7 +1,9 @@
-﻿namespace WorkerService_Executor.Interfaces
+﻿using Lib.DataTypes;
+
+namespace WorkerService_Executor.Interfaces
 {
     public interface IWorkerExecutor
     {
-        void StartWithParametersAsync(string parameter1, CancellationToken cancellationToken);
+        void StartWithParametersAsync(Message aMessage, CancellationToken cancellationToken);
     }
 }

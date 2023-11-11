@@ -25,15 +25,6 @@ namespace WorkerService_Broker.Functions
 
             // #2
             AppData.QueueServer = commonFunctions.ReadCriticalParameter(config, "QueueServer");
-
-            // #3
-            AppData.DelayInSeconds = commonFunctions.ReadIntParameter(config, "DelayInSeconds", 5);
-
-            // #4
-            AppData.FileMaxAccessWait = commonFunctions.ReadIntParameter(config, "FileMaxAccessWait", 120000);
-
-            // #5
-            AppData.SleepBetweenFileAccessAttempt = commonFunctions.ReadIntParameter(config, "SleepBetweenFileAccessAttempt", 500);
         }
     }
 }

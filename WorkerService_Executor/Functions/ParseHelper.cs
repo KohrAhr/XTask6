@@ -1,11 +1,15 @@
 ﻿using Lib.CommonFunctions;
 using Lib.DataTypes;
+using Lib.DataTypes.EF;
 using System.Text.RegularExpressions;
+using WorkerService_Executor.Core;
+using WorkerService_Executor.EF;
 
 namespace WorkerService_Executor.Functions
 {
     public class ParseHelper
     {
+        // TODO: Move them away
         private const string CONST_REGEX_HEADER = @"^HDR\s+(\S+)\s+(\S+)$";
         private const string CONST_REGEX_DATALINE = @"^LINE\s+(\S+)\s+(\d+)\s+(\d+)$";
 
@@ -29,7 +33,7 @@ namespace WorkerService_Executor.Functions
         /// <param name="aFileName"></param>
         /// <param name="aExecutorId"></param>
         /// <returns></returns>
-        public DataFileResult ProceedDataFile(string aFileName)
+        public DataFileResult ProceedDataFile(string aFileName, Int64 aFileId)
         {
             DataFileResult result = new()
             {
@@ -42,130 +46,168 @@ namespace WorkerService_Executor.Functions
 
             string onlyFileName = Path.GetFileName(aFileName);
 
-            // Can access data file?
+            // Can we access data file?
 
-            // File is accessible
-            if (new CommonFunctions(_logger).FileIsAccessible(aFileName))
+            // File is accessible and exist
+            if (!new CommonFunctions(_logger).FileIsAccessible(aFileName, AppData.FileMaxAccessWait, AppData.SleepBetweenFileAccessAttempt))
             {
-                // OK file is accessible now
-                try
+                result.ErrorMessaget = "File is locked over limited time by another process or does not exist.";
+                return result;
+            }
+
+            // OK file is accessible now
+            try
+            {
+                using (FileStream fileStream = new FileStream(aFileName, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
-                    using (FileStream fileStream = new FileStream(aFileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (StreamReader reader = new StreamReader(fileStream))
                     {
-                        using (StreamReader reader = new StreamReader(fileStream))
+                        // Read data from the file
+                        string? line;
+                        while ((line = reader.ReadLine()?.Trim()) != null)
                         {
-                            // Read data from the file
-                            string? line;
-                            while ((line = reader.ReadLine()?.Trim()) != null)
+                            lineId++;
+
+                            // Ok, log for all might be too expensive?
+                            if (lineId % 1000000 == 0)
                             {
-                                lineId++;
+                                _logger.LogInformation($"File: \"{onlyFileName}\". Completed lines in file {lineId}. Total boxes saved {result.EntriesInFilesOK}");
+                            }
 
-                                // Ok, log for all might be too expensive?
-                                if (lineId % 10000 == 0)
+
+                            // Nothing to do with empty line
+                            if (String.IsNullOrEmpty(line))
+                            {
+                                continue;
+                            }
+
+                            // Is it Header?
+                            if (line.StartsWith(CONST_HEADER_STARTWITH))
+                            {
+                                // If currentBox is not null, save it
+                                if (currentBox != null)
                                 {
-                                    _logger.LogInformation($"File: \"{onlyFileName}\".Total boxes saved {lineId}");
+                                    // TODO: Save Box to db
+                                    SaveBoxToDb(currentBox, aFileId);
+
+                                    //
+
+                                    result.EntriesInFilesOK++;
+
+                                    currentBox = null;
                                 }
 
+                                // Start a new aBox
+                                currentBox = ParseHeaderLine(line);
 
-                                // Nothing to do with empty line
-                                if (String.IsNullOrEmpty(line))
+                                if (currentBox == null)
                                 {
-                                    continue;
+                                    // bad data
+
+                                    ReportBadData(aFileName, lineId, line);
+                                    result.EntriesInFilesFailed++;
                                 }
 
-                                // Is it Header?
-                                if (line.StartsWith(CONST_HEADER_STARTWITH))
+                                // No reason to wait until end of loop
+                                continue;
+                            }
+                            // or data
+                            else
+                            if (line.StartsWith(CONST_LINE_STARTWITH) && currentBox != null)
+                            {
+                                Box.Content? contentOfLine = ParseLine(line);
+
+                                if (contentOfLine != null)
                                 {
-                                    // If currentBox is not null, save it
-                                    if (currentBox != null)
-                                    {
-                                        // TODO: Save Box to db
-
-                                        //
-
-                                        result.EntriesInFilesOK++;
-
-                                        currentBox = null;
-                                    }
-
-                                    // Start a new box
-                                    currentBox = ParseHeaderLine(line);
-
-                                    if (currentBox == null)
-                                    {
-                                        // bad data
-
-                                        ReportBadData(aFileName, lineId, line);
-                                        result.EntriesInFilesFailed++;
-                                    }
-
-                                    // No reason to wait until end of loop
-                                    continue;
-                                }
-                                // or data
-                                else
-                                if (line.StartsWith(CONST_LINE_STARTWITH) && currentBox != null)
-                                {
-                                    Box.Content? contentOfLine = ParseLine(line);
-
-                                    if (contentOfLine != null)
-                                    {
-                                        currentBox.Contents.Add(contentOfLine);
-                                    }
-                                    else
-                                    {
-                                        // bad data
-
-                                        ReportBadData(aFileName, lineId, line);
-                                        result.EntriesInFilesFailed++;
-                                    }
+                                    currentBox.Contents.Add(contentOfLine);
                                 }
                                 else
                                 {
-                                    // Handle invalid lines or other scenarios
+                                    // bad data
 
                                     ReportBadData(aFileName, lineId, line);
                                     result.EntriesInFilesFailed++;
                                 }
                             }
-
-                            // Leftovers or Last box entry
-                            if (currentBox != null)
+                            else
                             {
-                                // TODO: Save Box to db
+                                // Handle invalid lines or other scenarios
 
-                                //
-
-                                result.EntriesInFilesOK++;
-
-                                currentBox = null;
+                                ReportBadData(aFileName, lineId, line);
+                                result.EntriesInFilesFailed++;
                             }
-
-                            // Leftovers 
-                            _logger.LogInformation($"File: \"{onlyFileName}\".Total boxes saved {lineId}");
                         }
+
+                        // Leftovers or Last aBox entry
+                        if (currentBox != null)
+                        {
+                            // TODO: Save Box to db
+                            SaveBoxToDb(currentBox, aFileId);
+                            //
+
+                            result.EntriesInFilesOK++;
+
+                            currentBox = null;
+                        }
+
+                        // Leftovers 
+                        _logger.LogInformation($"File: \"{onlyFileName}\". Total lines in file {lineId}. Total boxes saved {result.EntriesInFilesOK}. Total failed boxes: {result.EntriesInFilesFailed}");
                     }
-
-                    // All entries from files are completed. Consider as Succcess
-                    result.Suceeded = true;
                 }
-                catch (Exception ex)
-                {
-                    result.ErrorMessaget = "Exteption has occured. Error message: {ex.Message}";
 
-                    _logger.LogError($"Exteption has occured. Data file is \"{aFileName}\". Error message: {ex.Message}");
-
-                    result.Suceeded = false;
-                }
+                // All entries from files are completed. Consider as Succcess
+                result.Suceeded = true;
             }
-            else
+            catch (Exception ex)
             {
-                result.ErrorMessaget = "File is locked by another process or user.";
+                result.ErrorMessaget = $"Exteption. Error message: {ex.InnerException}";
+
+                _logger.LogError($"Exteption has occured. Data file is \"{aFileName}\". Error message: {ex.InnerException}");
+
+                result.Suceeded = false;
             }
 
             return result;
         }
 
+
+        private void SaveBoxToDb(Box aBox, Int64 aFileId)
+        {
+            // Main entry
+            Data_Identifiers data_Identifiers = new Data_Identifiers
+            {
+                InIdentifier = aBox.Identifier,
+                InSupplierId = aBox.SupplierIdentifier,
+                TrackFileId = aFileId
+            };
+
+            IList<Data_IdentifiersDetails> identifiersDetailsList = new List<Data_IdentifiersDetails>();
+
+            using (AppDbContext context = new AppDbContext())
+            {
+                // Main entry
+                context.Data_Identifiers.Add(data_Identifiers);
+                context.SaveChanges();
+
+                // Addons (details)
+                foreach(Box.Content item in aBox.Contents) 
+                {
+                    Data_IdentifiersDetails data_IdentifiersDetails = new Data_IdentifiersDetails
+                    {
+                        IdentifierId = data_Identifiers.InId,
+                        PoNumber = item.PoNumber,
+                        ISBN = item.Isbn,
+                        Qty = item.Quantity
+                    };
+
+                    identifiersDetailsList.Add(data_IdentifiersDetails);
+                }
+
+                // Add all objects to the context in one go and save changes
+                context.Data_IdentifiersDetails.AddRange(identifiersDetailsList);
+                context.SaveChanges();
+            }
+        }
 
         private void ReportBadData(string aFileName, int aLineId, string aLineValue)
         {
