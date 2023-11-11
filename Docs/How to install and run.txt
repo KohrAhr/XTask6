@@ -38,9 +38,3 @@ How to run App
 3. Copy test files into folders (the same as in Table "SetUp_Folders")
 
 
-=======================
-NOTES
-=======================
-
-System has been tested with files over 6 GByte and 800K box records.
-Maximum given load was 32 Gbyte (by using 4GB & 6GB files) with overall 8MLN box records.
