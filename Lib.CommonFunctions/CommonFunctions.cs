@@ -49,6 +49,11 @@ namespace Lib.CommonFunctions
             return lResult;
         }
 
+        //public IConfigurationRoot GetConfigFile()
+        //{
+        //    return new ConfigurationBuilder().AddConfiguration().JsonFile("appsettings.json").Build();
+        //}
+
         public bool FileIsAccessible(string aFilePath, int aMaxWaitTime = 120000, int aSleepBetweenAttempt = 500)
         {
             if (!File.Exists(aFilePath)) 

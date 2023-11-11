@@ -100,13 +100,20 @@ namespace WorkerService_Observer
 
             try
             {
+                // FileSystemWatcher Limitations:
+                // It's worth noting that FileSystemWatcher has limitations and might not capture all events under various circumstances,
+                // especially in high-frequency or rapidly changing environments.
                 FileSystemWatcher fileWatcher = new FileSystemWatcher
                 {
                     Path = aPath,
-                    Filter = aFileMask,
-                    EnableRaisingEvents = true
+                    Filter = aFileMask
                 };
                 fileWatcher.Created += OnFileCreated;
+                
+                // Enable raising events after(!) setting up the event handlers
+                fileWatcher.EnableRaisingEvents = true;
+
+                _logger.LogInformation($"Watcher for folder \"{aPath}\" created. File mask: \"{aFileMask}\"");
 
                 result++;
             }
