@@ -39,7 +39,7 @@ namespace Lib.RabbitMQ
             catch (BrokerUnreachableException ex)
             {
                 _logger?.LogCritical($"Broker is unreachable. Please verify that RabbitMQ service is up and running on {connectionFactory.HostName}");
-                throw ex;
+                throw new Exception(ex.Message, ex);
             }
             model = connection.CreateModel();
 
