@@ -50,7 +50,18 @@ namespace WorkerService_Observer
             new Settings(_logger).ProceedConfigFile();
 
             // Init RabbitMQ pipeline
-            rabbitMQHelper.InitRabbitMQ(AppData.QueueServer, AppData.QueuePath, out factory, out connection, out channel);
+            try
+            {
+                rabbitMQHelper.InitRabbitMQ(AppData.QueueServer, AppData.QueuePath, out factory, out connection, out channel);
+            }
+            catch (Exception ex)
+            {
+                // Problems with MQ Server
+                _logger.LogError(ex.Message);
+
+                Environment.Exit(3);
+            }
+
 
             // Load settings from db
             _logger.LogInformation(
