@@ -1,0 +1,46 @@
+=======================
+Requirements
+=======================
+
+1. .NET 6 Core
+
+2. MS SQL Server 2019 Express or higher
+
+3. RabbitMQ Server 3.12.8
+
+4. Visual Studio 2022 Community or higher to build and compile C# solutions
+
+
+=======================
+How to install db
+=======================
+
+1. Create new database in MS SQL Server with name "SimCity"
+
+2. One-by-one run all SQL scripts stored in the folder "/db/" over new database "SimCity". All sql scripts are re-executable.
+
+3. Update Absolute Paths in Table "SetUp_Folders". 
+
+
+=======================
+How to run App
+=======================
+
+0. Make Initial configuration in "appsettings.json" files. You can use the same file for "WorkerService_Broker", "WorkerService_Observer" & "WorkerService_Executor" apps
+ - update Db connection string
+ - update RabbitMQ server name
+ - optionallty you can override other parameters
+ 
+1. Run "WorkerService_Observer.exe"
+
+2. Run "WorkerService_Broker.exe"
+
+3. Copy test files into folders (the same as in Table "SetUp_Folders")
+
+
+=======================
+NOTES
+=======================
+
+System has been tested with files over 6 GByte and 800K box records.
+Maximum given load was 32 Gbyte (by using 4GB & 6GB files) with overall 8MLN box records.
