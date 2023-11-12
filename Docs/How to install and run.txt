@@ -4,7 +4,7 @@ Requirements
 
 1. .NET 6 Core
 
-2. MS SQL Server 2019 Express or higher
+2. MS SQL Server 2019 Express or higher. In fact, scripts are compatible even with MS SQL 2008R2
 
 3. RabbitMQ Server 3.12.8
 
