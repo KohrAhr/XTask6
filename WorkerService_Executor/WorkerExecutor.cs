@@ -21,7 +21,7 @@ namespace WorkerService_Executor
             new Settings(_logger).ProceedConfigFile();
         }
 
-        public void StartWithParametersAsync(Message aMessage, CancellationToken cancellationToken)
+        public async void StartWithParametersAsync(Message aMessage, CancellationToken cancellationToken)
         {
             //
             _logger.LogInformation($"WorkerExecutor started with parameters: FileName {aMessage.FileName}. Id {aMessage.TrackFileId}");
@@ -52,7 +52,7 @@ namespace WorkerService_Executor
             // Proceed file
             try
             {
-                dataFileResult = parseHelper.ProceedDataFile(aMessage.FileName, aMessage.TrackFileId);
+                dataFileResult = await parseHelper.ProceedDataFile(aMessage.FileName, aMessage.TrackFileId);
             }
             finally
             {

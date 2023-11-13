@@ -33,7 +33,7 @@ namespace WorkerService_Executor.Functions
         /// <param name="aFileName"></param>
         /// <param name="aExecutorId"></param>
         /// <returns></returns>
-        public DataFileResult ProceedDataFile(string aFileName, Int64 aFileId)
+        public async Task<DataFileResult> ProceedDataFile(string aFileName, Int64 aFileId)
         {
             DataFileResult result = new()
             {
@@ -64,8 +64,9 @@ namespace WorkerService_Executor.Functions
                     {
                         // Read data from the file
                         string? line;
-                        while ((line = reader.ReadLine()?.Trim()) != null)
+                        while ((line = await reader.ReadLineAsync()) != null)
                         {
+                            line = line.Trim();
                             lineId++;
 
                             // Ok, log for all might be too expensive?
