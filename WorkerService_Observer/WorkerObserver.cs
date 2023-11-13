@@ -1,13 +1,12 @@
 using Lib.DataTypes;
 using Lib.RabbitMQ;
 using Lib.RabbitMQ.Interfaces;
-using Newtonsoft.Json;
 using RabbitMQ.Client;
 using WorkerService_Observer.Core;
 using WorkerService_Observer.EF;
 using WorkerService_Observer.Functions;
 using Lib.DataTypes.EF;
-using System.IO;
+using System.Text.Json;
 
 namespace WorkerService_Observer
 {
@@ -218,7 +217,7 @@ namespace WorkerService_Observer
 
 
             // Send message to MSMQ/RabbitMQ
-            string rawMessage = JsonConvert.SerializeObject(message);
+            string rawMessage = JsonSerializer.Serialize(message);
             rabbitMQHelper?.SendMessage(channel, AppData.QueuePath, rawMessage);
 
         }

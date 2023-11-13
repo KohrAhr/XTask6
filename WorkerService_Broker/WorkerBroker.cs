@@ -1,9 +1,9 @@
 using Lib.DataTypes;
 using Lib.RabbitMQ;
 using Lib.RabbitMQ.Interfaces;
-using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using System.Text.Json;
 using WorkerService_Broker.Core;
 using WorkerService_Broker.Functions;
 using WorkerService_Executor.Interfaces;
@@ -86,7 +86,7 @@ namespace WorkerService_Broker
                 return;
             }
 
-            Message? message = JsonConvert.DeserializeObject<Message>(result);
+            Message? message = JsonSerializer.Deserialize<Message>(result);
 
             if (message == null) 
             {
