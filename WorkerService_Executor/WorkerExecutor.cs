@@ -6,19 +6,31 @@ using WorkerService_Executor.Interfaces;
 
 namespace WorkerService_Executor
 {
-    public class WorkerExecutor : BackgroundService, IWorkerExecutor
+    public class WorkerExecutor : BackgroundService, IWorkerExecutor, IDisposable
     {
         private readonly ILogger<WorkerExecutor> _logger;
         private ParseHelper parseHelper;
+
+        private readonly AppDbContext appDbContext;
 
         public WorkerExecutor(ILogger<WorkerExecutor> logger)
         {
             _logger = logger;
 
-            parseHelper = new ParseHelper(_logger);
+            appDbContext = new AppDbContext();
+
+            parseHelper = new ParseHelper(_logger, appDbContext);
 
             // Load settings
             new Settings(_logger).ProceedConfigFile();
+
+        }
+
+        public override void Dispose()
+        {
+            appDbContext.Dispose();
+
+            base.Dispose();
         }
 
         public async void StartWithParametersAsync(Message aMessage, CancellationToken cancellationToken)
@@ -34,20 +46,17 @@ namespace WorkerService_Executor
             // Update db -- Update Start Proceed Time
             // After first usage we we get Id
             TrackLog_Files? file;
-            using (AppDbContext context = new AppDbContext())
+            file = appDbContext.TrackLog_Files.Where(x => x.TrackFileId == aMessage.TrackFileId && x.FileStartProceedTime == null).FirstOrDefault();
+
+            if (file == null) 
             {
-                file = context.TrackLog_Files.Where(x => x.TrackFileId == aMessage.TrackFileId && x.FileStartProceedTime == null).FirstOrDefault();
-
-                if (file == null) 
-                {
-                    _logger.LogError($"Entry not found in TrackLog_Files table! File name \"{aMessage.FileName}\". Id {aMessage.TrackFileId}. 1st update");
-                    return;
-                }
-
-                file.FileStartProceedTime = DateTime.Now;
-
-                context.SaveChanges();
+                _logger.LogError($"Entry not found in TrackLog_Files table! File name \"{aMessage.FileName}\". Id {aMessage.TrackFileId}. 1st update");
+                return;
             }
+
+            file.FileStartProceedTime = DateTime.Now;
+
+            appDbContext.SaveChanges();
 
             // Proceed file
             try
@@ -64,25 +73,22 @@ namespace WorkerService_Executor
                     // Update overall status
 
                     // Update End Proceed Time
-                    using (AppDbContext context = new AppDbContext())
+                    // Ok, now we know Id and can use it
+                    file = appDbContext.TrackLog_Files.Where(x => x.TrackFileId == file.TrackFileId && x.FileStartProceedTime != null && x.FileFinishProceedTime == null).FirstOrDefault();
+
+                    if (file == null)
                     {
-                        // Ok, now we know Id and can use it
-                        file = context.TrackLog_Files.Where(x => x.TrackFileId == file.TrackFileId && x.FileStartProceedTime != null && x.FileFinishProceedTime == null).FirstOrDefault();
+                        _logger.LogError($"Entry not found in TrackLog_Files table! File name \"{aMessage.FileName}\". Id {aMessage.TrackFileId}. 2nd update");
+                    }
+                    else
+                    {
+                        file.ErrorMessage = dataFileResult.ErrorMessaget;
+                        file.EntriesInFilesOK = dataFileResult.EntriesInFilesOK;
+                        file.EntriesInFilesFailed = dataFileResult.EntriesInFilesFailed;
+                        file.OverallSuccessStatus = dataFileResult.Suceeded;
 
-                        if (file == null)
-                        {
-                            _logger.LogError($"Entry not found in TrackLog_Files table! File name \"{aMessage.FileName}\". Id {aMessage.TrackFileId}. 2nd update");
-                        }
-                        else
-                        {
-                            file.ErrorMessage = dataFileResult.ErrorMessaget;
-                            file.EntriesInFilesOK = dataFileResult.EntriesInFilesOK;
-                            file.EntriesInFilesFailed = dataFileResult.EntriesInFilesFailed;
-                            file.OverallSuccessStatus = dataFileResult.Suceeded;
-
-                            file.FileFinishProceedTime = DateTime.Now;
-                            context.SaveChanges();
-                        }
+                        file.FileFinishProceedTime = DateTime.Now;
+                        appDbContext.SaveChanges();
                     }
                 }
             }

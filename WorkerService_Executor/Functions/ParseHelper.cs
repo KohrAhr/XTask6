@@ -1,6 +1,7 @@
 ﻿using Lib.CommonFunctions;
 using Lib.DataTypes;
 using Lib.DataTypes.EF;
+using System;
 using System.Text.RegularExpressions;
 using WorkerService_Executor.Core;
 using WorkerService_Executor.EF;
@@ -18,13 +19,17 @@ namespace WorkerService_Executor.Functions
 
         private ILogger _logger;
 
+        private readonly AppDbContext appDbContext;
+
         /// <summary>
         ///     Constructor
         /// </summary>
         /// <param name="logger"></param>
-        public ParseHelper(ILogger logger) 
+        public ParseHelper(ILogger logger, AppDbContext aAppDbContext) 
         { 
             _logger = logger;
+
+            appDbContext = aAppDbContext;
         }
 
         /// <summary>
@@ -184,30 +189,27 @@ namespace WorkerService_Executor.Functions
 
             IList<Data_IdentifiersDetails> identifiersDetailsList = new List<Data_IdentifiersDetails>();
 
-            using (AppDbContext context = new AppDbContext())
+            // Main entry
+            appDbContext.Data_Identifiers.Add(data_Identifiers);
+            appDbContext.SaveChanges();
+
+            // Addons (details)
+            foreach(Box.Content item in aBox.Contents) 
             {
-                // Main entry
-                context.Data_Identifiers.Add(data_Identifiers);
-                context.SaveChanges();
-
-                // Addons (details)
-                foreach(Box.Content item in aBox.Contents) 
+                Data_IdentifiersDetails data_IdentifiersDetails = new Data_IdentifiersDetails
                 {
-                    Data_IdentifiersDetails data_IdentifiersDetails = new Data_IdentifiersDetails
-                    {
-                        IdentifierId = data_Identifiers.InId,
-                        PoNumber = item.PoNumber,
-                        ISBN = item.Isbn,
-                        Qty = item.Quantity
-                    };
+                    IdentifierId = data_Identifiers.InId,
+                    PoNumber = item.PoNumber,
+                    ISBN = item.Isbn,
+                    Qty = item.Quantity
+                };
 
-                    identifiersDetailsList.Add(data_IdentifiersDetails);
-                }
-
-                // Add all objects to the context in one go and save changes
-                context.Data_IdentifiersDetails.AddRange(identifiersDetailsList);
-                context.SaveChanges();
+                identifiersDetailsList.Add(data_IdentifiersDetails);
             }
+
+            // Add all objects to the context in one go and save changes
+            appDbContext.Data_IdentifiersDetails.AddRange(identifiersDetailsList);
+            appDbContext.SaveChanges();
         }
 
         private void ReportBadData(string aFileName, int aLineId, string aLineValue)
@@ -271,6 +273,5 @@ namespace WorkerService_Executor.Functions
             // Return null for invalid lines
             return null;
         }
-
     }
 }
