@@ -64,8 +64,9 @@ namespace WorkerService_Observer
 
             // Load settings from db
             _logger.LogInformation(
-                $"Watcher is initializing for Scope Of with Folders with Id {AppData.ScopeOfFolders}. MQ Server is {AppData.QueueServer}. Pipeline is {AppData.QueuePath}. " +
-                $"Event Recycler, helpful when one instance handling multiply folders, set to {AppData.EventRecycler} seconds"
+                "Watcher is initializing for Scope Of with Folders with Id {AppData.ScopeOfFolders}. MQ Server is {AppData.QueueServer}. Pipeline is {AppData.QueuePath}. " +
+                "Event Recycler, helpful when one instance handling multiply folders, set to {AppData.EventRecycler} seconds",
+                AppData.ScopeOfFolders, AppData.QueueServer, AppData.QueuePath, AppData.EventRecycler
             );
 
             IList<Config_Folders>? folders = null;
@@ -101,7 +102,7 @@ namespace WorkerService_Observer
                 Environment.Exit(1);
             }
 
-            _logger.LogInformation($"Watcher is started for {result} folder(s)!");
+            _logger.LogInformation("Watcher is started for {result} folder(s)!", result);
 
             // We are good to continue
             return ExecuteAsync(cancellationToken);
@@ -142,7 +143,7 @@ namespace WorkerService_Observer
                 // !
                 fileSystemWatchers.Add(fileWatcher);
 
-                _logger.LogInformation($"Watcher for folder \"{aPath}\" created. File mask: \"{aFileMask}\"");
+                _logger.LogInformation("Watcher for folder \"{aPath}\" created. File mask: \"{aFileMask}\"", aPath, aFileMask);
 
                 result++;
             }
@@ -150,7 +151,7 @@ namespace WorkerService_Observer
             {
                 // Folder does not exist
                 // TODO: Return better message
-                _logger.LogWarning($"Folder \"{aPath}\" does not exist or does not accessible. Error message {ex.Message}");
+                _logger.LogWarning("Folder \"{aPath}\" does not exist or does not accessible. Error message {ex.Message}", aPath, ex.Message);
             }
 
             return result;
@@ -186,7 +187,7 @@ namespace WorkerService_Observer
                 {
                     // We did this file before?
 
-                    _logger.LogWarning($"File {aFile} already in system.");
+                    _logger.LogWarning("File {aFile} already in system.", aFile);
 
                     // SHould be inform Operator?
 
@@ -213,7 +214,7 @@ namespace WorkerService_Observer
 
             message.TrackFileId = trackLog_Files.TrackFileId;
 
-            _logger.LogInformation($"New incomming file \"{message.FileName}\" at {DateTime.Now} with Id {message.TrackFileId}");
+            _logger.LogInformation("New incomming file \"{message.FileName}\" at {DateTime.Now} with Id {message.TrackFileId}", message.FileName, DateTime.Now, message.TrackFileId);
 
 
             // Send message to MSMQ/RabbitMQ
@@ -244,7 +245,7 @@ namespace WorkerService_Observer
                 catch (TaskCanceledException ex)
                 {
                     // What we can do?
-                    _logger.LogError($"Exception on Task cancellation. {ex.Message}");
+                    _logger.LogError("Exception on Task cancellation. {ex.Message}", ex.Message);
                 }
             }
         }
