@@ -77,7 +77,10 @@ namespace WorkerService_Executor.Functions
                             // Ok, log for all might be too expensive?
                             if (lineId % 1000000 == 0)
                             {
-                                _logger.LogInformation($"File: \"{onlyFileName}\". Completed lines in file {lineId}. Total boxes saved {result.EntriesInFilesOK}");
+                                _logger.LogInformation(
+                                    "File: \"{onlyFileName}\". Completed lines in file {lineId}. Total boxes saved {result.EntriesInFilesOK}", 
+                                    onlyFileName, lineId, result.EntriesInFilesOK
+                                );
                             }
 
 
@@ -157,7 +160,10 @@ namespace WorkerService_Executor.Functions
                         }
 
                         // Leftovers 
-                        _logger.LogInformation($"File: \"{onlyFileName}\". Total lines in file {lineId}. Total boxes saved {result.EntriesInFilesOK}. Total failed boxes: {result.EntriesInFilesFailed}");
+                        _logger.LogInformation(
+                            "File: \"{onlyFileName}\". Total lines in file {lineId}. Total boxes saved {result.EntriesInFilesOK}. Total failed boxes: {result.EntriesInFilesFailed}", 
+                            onlyFileName, lineId, result.EntriesInFilesOK, result.EntriesInFilesFailed
+                        );
                     }
                 }
 
@@ -168,7 +174,7 @@ namespace WorkerService_Executor.Functions
             {
                 result.ErrorMessaget = $"Exteption. Error message: {ex.InnerException}";
 
-                _logger.LogError($"Exteption has occured. Data file is \"{aFileName}\". Error message: {ex.InnerException}");
+                _logger.LogError("Exteption has occured. Data file is \"{aFileName}\". Error message: {ex.InnerException}", aFileName, ex.InnerException);
 
                 result.Suceeded = false;
             }
@@ -214,7 +220,7 @@ namespace WorkerService_Executor.Functions
 
         private void ReportBadData(string aFileName, int aLineId, string aLineValue)
         {
-            _logger.LogWarning($"File \"{aFileName}\" has failed at parsing. Unrecognized data. Issue in line {aLineId}, value \"{aLineValue}\"");
+            _logger.LogWarning("File \"{aFileName}\" has failed at parsing. Unrecognized data. Issue in line {aLineId}, value \"{aLineValue}\"", aFileName, aLineId, aLineValue);
         }
 
         /// <summary>

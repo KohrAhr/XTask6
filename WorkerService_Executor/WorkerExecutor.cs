@@ -36,9 +36,9 @@ namespace WorkerService_Executor
         public async void StartWithParametersAsync(Message aMessage, CancellationToken cancellationToken)
         {
             //
-            _logger.LogInformation($"WorkerExecutor started with parameters: FileName {aMessage.FileName}. Id {aMessage.TrackFileId}");
+            _logger.LogInformation("WorkerExecutor started with parameters: FileName {aMessage.FileName}. Id {aMessage.TrackFileId}", aMessage.FileName, aMessage.TrackFileId);
 
-            _logger.LogInformation($"Start with file \"{aMessage.FileName}\" at {DateTime.Now}");
+            _logger.LogInformation("Start with file \"{aMessage.FileName}\" at {DateTime.Now}", aMessage.FileName, DateTime.Now);
 
             // Run
             DataFileResult? dataFileResult = null;
@@ -50,7 +50,7 @@ namespace WorkerService_Executor
 
             if (file == null) 
             {
-                _logger.LogError($"Entry not found in TrackLog_Files table! File name \"{aMessage.FileName}\". Id {aMessage.TrackFileId}. 1st update");
+                _logger.LogError("Entry not found in TrackLog_Files table! File name \"{aMessage.FileName}\". Id {aMessage.TrackFileId}. 1st update", aMessage.FileName, aMessage.TrackFileId);
                 return;
             }
 
@@ -78,7 +78,7 @@ namespace WorkerService_Executor
 
                     if (file == null)
                     {
-                        _logger.LogError($"Entry not found in TrackLog_Files table! File name \"{aMessage.FileName}\". Id {aMessage.TrackFileId}. 2nd update");
+                        _logger.LogError("Entry not found in TrackLog_Files table! File name \"{aMessage.FileName}\". Id {aMessage.TrackFileId}. 2nd update", aMessage.FileName, aMessage.TrackFileId);
                     }
                     else
                     {
@@ -94,7 +94,10 @@ namespace WorkerService_Executor
             }
 
             // End
-            _logger.LogInformation($"Ended with file \"{aMessage.FileName}\". Id {aMessage.TrackFileId}. Proceeded records: {dataFileResult.EntriesInFilesOK}. Failed records: {dataFileResult.EntriesInFilesFailed}. Overall status: {dataFileResult.Suceeded}");
+            _logger.LogInformation(
+                "Ended with file \"{aMessage.FileName}\". Id {aMessage.TrackFileId}. Proceeded records: {dataFileResult.EntriesInFilesOK}. Failed records: {dataFileResult.EntriesInFilesFailed}. Overall status: {dataFileResult.Suceeded}",
+                aMessage.FileName, aMessage.TrackFileId, dataFileResult.EntriesInFilesOK, dataFileResult.EntriesInFilesFailed, dataFileResult.Suceeded
+            );
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -110,7 +113,7 @@ namespace WorkerService_Executor
                 catch (TaskCanceledException ex)
                 {
                     // What we can do?
-                    _logger.LogError($"Exception on Task cancellation. {ex.Message}");
+                    _logger.LogError("Exception on Task cancellation. {ex.Message}", ex.Message);
                 }
             }
         }
