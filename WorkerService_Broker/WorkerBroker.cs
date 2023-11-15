@@ -82,7 +82,7 @@ namespace WorkerService_Broker
 
             if (String.IsNullOrEmpty(result)) 
             {
-                _logger.LogError($"Empty message received.");
+                _logger.LogError("Empty message received.");
                 return;
             }
 
@@ -90,12 +90,12 @@ namespace WorkerService_Broker
 
             if (message == null) 
             {
-                _logger.LogError($"Broken message received. Transformation failed. Data dump: {result}");
+                _logger.LogError("Broken message received. Transformation failed. Data dump: {result}", result);
                 return;
             }
 
             // Run Executor for file
-            _logger.LogInformation($"File is available \"{message.FileName}\". Id {message.TrackFileId}");
+            _logger.LogInformation("File is available \"{message.FileName}\". Id {message.TrackFileId}", message.FileName, message.TrackFileId);
 
             // Start the other WorkerService.
             IWorkerExecutor otherWorker = _executorHost.Services.GetRequiredService<IWorkerExecutor>();
@@ -121,7 +121,7 @@ namespace WorkerService_Broker
                 catch (TaskCanceledException ex) 
                 {
                     // What we can do?
-                    _logger.LogError($"Exception on Task cancellation. {ex.Message}");
+                    _logger.LogError("Exception on Task cancellation. {ex.Message}", ex.Message);
                 }
             }
         }
