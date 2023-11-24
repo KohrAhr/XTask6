@@ -9,15 +9,19 @@ namespace Lib.RabbitMQ
 {
     public class RabbitMQHelper : IRabbitMQHelper
     {
-        private readonly ILogger _logger;
+        private ILogger? _logger = null;
 
         /// <summary>
         ///     Constructor
         /// </summary>
         /// <param name="logger"></param>
-        public RabbitMQHelper(ILogger logger) 
+        public RabbitMQHelper() 
         { 
-            _logger = logger;
+        }
+
+        public void SetLogger(ILogger aLogger) 
+        { 
+            _logger = aLogger;
         }
 
         /// <summary>
