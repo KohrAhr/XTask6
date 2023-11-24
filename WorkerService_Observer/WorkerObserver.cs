@@ -1,5 +1,4 @@
 using Lib.DataTypes;
-using Lib.RabbitMQ;
 using Lib.RabbitMQ.Interfaces;
 using RabbitMQ.Client;
 using WorkerService_Observer.Core;
@@ -14,7 +13,7 @@ namespace WorkerService_Observer
     {
         private readonly ILogger<WorkerObserver> _logger;
 
-        private IRabbitMQHelper rabbitMQHelper;
+        private IRabbitMQHelper _rabbitMQHelper;
 
         /// <summary>
         ///     List of folders we are observe
@@ -31,11 +30,12 @@ namespace WorkerService_Observer
         ///     Constructor
         /// </summary>
         /// <param name="logger"></param>
-        public WorkerObserver(ILogger<WorkerObserver> logger)
+        public WorkerObserver(ILogger<WorkerObserver> logger, IRabbitMQHelper aRabbitMQHelper)
         {
             _logger = logger;
 
-            rabbitMQHelper = new RabbitMQHelper(_logger);
+            _rabbitMQHelper = aRabbitMQHelper;
+            _rabbitMQHelper.SetLogger(_logger);
         }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace WorkerService_Observer
             // Init RabbitMQ pipeline
             try
             {
-                rabbitMQHelper.InitRabbitMQ(AppData.QueueServer, AppData.QueuePath, out factory, out connection, out channel);
+                _rabbitMQHelper.InitRabbitMQ(AppData.QueueServer, AppData.QueuePath, out factory, out connection, out channel);
             }
             catch (Exception ex)
             {
@@ -203,8 +203,10 @@ namespace WorkerService_Observer
             };
 
             // Add entry into db table Files
-            TrackLog_Files trackLog_Files = new TrackLog_Files();
-            trackLog_Files.FileFullPath = aFile;
+            TrackLog_Files trackLog_Files = new TrackLog_Files
+            {
+                FileFullPath = aFile
+            };
 
             using (AppDbContext context = new AppDbContext())
             {
@@ -219,7 +221,7 @@ namespace WorkerService_Observer
 
             // Send message to MSMQ/RabbitMQ
             string rawMessage = JsonSerializer.Serialize(message);
-            rabbitMQHelper?.SendMessage(channel, AppData.QueuePath, rawMessage);
+            _rabbitMQHelper?.SendMessage(channel, AppData.QueuePath, rawMessage);
 
         }
 
@@ -227,16 +229,12 @@ namespace WorkerService_Observer
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-//                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                //                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
 
                 // Self repair ? or to overflow ?
 
                 // Recycle events?
-                foreach (FileSystemWatcher watcher in fileSystemWatchers)
-                {
-                    watcher.EnableRaisingEvents = false;
-                    watcher.EnableRaisingEvents = true;
-                }
+                RecycleEvents(fileSystemWatchers);
 
                 try
                 {
@@ -247,6 +245,15 @@ namespace WorkerService_Observer
                     // What we can do?
                     _logger.LogError("Exception on Task cancellation. {ex.Message}", ex.Message);
                 }
+            }
+        }
+
+        private void RecycleEvents(List<FileSystemWatcher> aWatchedFolders)
+        {
+            foreach (FileSystemWatcher watcher in aWatchedFolders)
+            {
+                watcher.EnableRaisingEvents = false;
+                watcher.EnableRaisingEvents = true;
             }
         }
     }
