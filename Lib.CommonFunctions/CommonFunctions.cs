@@ -6,11 +6,15 @@ namespace Lib.CommonFunctions
 {
     public class CommonFunctions : ICommonFunctions
     {
-        private ILogger _logger;
+        private ILogger? _logger = null;
 
+        /// <summary>
+        ///     In C#, constructors of classes that implement interfaces must match the constructor signature defined by the interface. 
+        ///     Therefore, you cannot add additional parameters to the constructor in the implementing class that are not part of the interface.
+        /// </summary>
         public void SetLogger(ILogger aLogger)
         {
-            _logger = aLogger;
+            _logger = aLogger ?? throw new ArgumentNullException(nameof(aLogger));
         }
 
         /// <summary>
@@ -28,7 +32,7 @@ namespace Lib.CommonFunctions
             if (string.IsNullOrEmpty(lValue))
             {
                 string err = $"{aParamName} cannot be empty";
-                _logger.LogCritical(err);
+                _logger?.LogCritical(err);
                 throw new Exception(err);
             }
 
@@ -53,7 +57,7 @@ namespace Lib.CommonFunctions
         {
             if (!File.Exists(aFilePath)) 
             {
-                _logger.LogInformation($"File \"{aFilePath}\" does not exist.", aFilePath);
+                _logger?.LogInformation($"File \"{aFilePath}\" does not exist.", aFilePath);
                 return false;
             }
             
@@ -80,7 +84,7 @@ namespace Lib.CommonFunctions
                         return false;
                     }
 
-                    _logger.LogInformation($"File {aFilePath} is locked by another user. Error message is: {ex.Message}", aFilePath, ex.Message);
+                    _logger?.LogInformation($"File {aFilePath} is locked by another user. Error message is: {ex.Message}", aFilePath, ex.Message);
 
                     // Wait for a short period before trying again
                     Thread.Sleep(aSleepBetweenAttempt);
