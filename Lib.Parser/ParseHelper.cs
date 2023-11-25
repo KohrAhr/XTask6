@@ -8,7 +8,7 @@ using Lib.Parser.Interfaces;
 
 namespace Lib.Parser
 {
-    public class ParseHelper : IParserHelper
+    public class ParserHelper : IParserHelper
     {
         // TODO: Move them away
         private const string CONST_REGEX_HEADER = @"^HDR\s+(\S+)\s+(\S+)$";
@@ -31,7 +31,7 @@ namespace Lib.Parser
         ///     Constructor
         /// </summary>
         /// <param name="aLogger"></param>
-        public ParseHelper(ILogger aLogger, IAppDbContext aAppDbContext, ICommonFunctions aCommonFunctions)
+        public ParserHelper(ILogger aLogger, IAppDbContext aAppDbContext, ICommonFunctions aCommonFunctions)
         {
             _logger = aLogger ?? throw new ArgumentNullException(nameof(aLogger)); 
 

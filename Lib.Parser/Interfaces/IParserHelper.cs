@@ -2,7 +2,7 @@
 
 namespace Lib.Parser.Interfaces
 {
-    internal interface IParserHelper
+    public interface IParserHelper
     {
         void SetLimits(int aFileMaxAccessWait, int aSleepBetweenFileAccessAttempt);
 

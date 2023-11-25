@@ -5,31 +5,34 @@ using WorkerService_Executor.Core;
 using WorkerService_Executor.Functions;
 using WorkerService_Executor.Interfaces;
 using Lib.CommonFunctions.Interfaces;
+using Lib.Parser.Interfaces;
 
 namespace WorkerService_Executor
 {
     public class WorkerExecutor : BackgroundService, IWorkerExecutor, IDisposable
     {
         private readonly ILogger<WorkerExecutor> _logger;
-        private ParseHelper parseHelper;
+        private readonly IParserHelper _parserHelper;
         private readonly IAppDbContext _appDbContext;
 
         private readonly ICommonFunctions _commonFunctions;
 
-        public WorkerExecutor(ILogger<WorkerExecutor> logger, IAppDbContext aAppDbContext, ICommonFunctions aCommonFunctions)
+        public WorkerExecutor(ILogger<WorkerExecutor> logger, IAppDbContext aAppDbContext, ICommonFunctions aCommonFunctions, IParserHelper aParserHelper)
         {
             _logger = logger;
-            _appDbContext = aAppDbContext;
 
             _commonFunctions = aCommonFunctions;
             _commonFunctions.SetLogger(_logger);
-
-            parseHelper = new ParseHelper(_logger, _appDbContext, _commonFunctions);
 
             // Load settings
             new Settings(_logger, _commonFunctions).ProceedConfigFile();
 
             // Only once settings has been loaded.
+            _parserHelper = aParserHelper;
+            _parserHelper.SetLimits(AppData.FileMaxAccessWait, AppData.SleepBetweenFileAccessAttempt);
+
+            // Only once settings has been loaded.
+            _appDbContext = aAppDbContext;
             _appDbContext.SetConnectionString(AppData.ConnectionString);
         }
 
@@ -68,7 +71,7 @@ namespace WorkerService_Executor
             // Proceed file
             try
             {
-                dataFileResult = await parseHelper.ProceedDataFile(aMessage.FileName, aMessage.TrackFileId);
+                dataFileResult = await _parserHelper.ProceedDataFile(aMessage.FileName, aMessage.TrackFileId);
             }
             finally
             {

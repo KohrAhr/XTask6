@@ -32,7 +32,7 @@ namespace Lib.CommonFunctions
             if (string.IsNullOrEmpty(lValue))
             {
                 string err = $"{aParamName} cannot be empty";
-                _logger?.LogCritical(err);
+                _logger?.LogCritical(err, aParamName);
                 throw new Exception(err);
             }
 
