@@ -16,7 +16,7 @@ namespace WorkerService_Observer
         private readonly ILogger<WorkerObserver> _logger;
         private readonly IAppDbContext _appDbContext;
         private readonly ICommonFunctions _commonFunctions;
-        private IRabbitMQHelper _rabbitMQHelper;
+        private readonly IRabbitMQHelper _rabbitMQHelper;
 
         /// <summary>
         ///     List of folders we are observe
@@ -37,11 +37,12 @@ namespace WorkerService_Observer
         {
             _logger = logger;
 
-            _appDbContext = aAppDbContext;
+            _appDbContext = aAppDbContext ?? throw new ArgumentNullException(nameof(aAppDbContext));
 
-            _commonFunctions = aCommonFunctions;
+            _commonFunctions = aCommonFunctions ?? throw new ArgumentNullException(nameof(aCommonFunctions));
+            _commonFunctions.SetLogger(_logger);
 
-            _rabbitMQHelper = aRabbitMQHelper;
+            _rabbitMQHelper = aRabbitMQHelper ?? throw new ArgumentNullException(nameof(aRabbitMQHelper));
             _rabbitMQHelper.SetLogger(_logger);
        }
 

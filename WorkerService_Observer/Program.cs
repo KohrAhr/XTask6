@@ -11,7 +11,6 @@ IHost host = Host.CreateDefaultBuilder(args)
     {
         services.AddHostedService<WorkerObserver>();
 
-        // Register IWorkerExecutor and WorkerExecutor.
         services.AddTransient<IRabbitMQHelper, RabbitMQHelper>();
         services.AddTransient<IAppDbContext, AppDbContext>();
         services.AddTransient<ICommonFunctions, CommonFunctions>();

@@ -21,20 +21,15 @@ namespace Lib.Parser
 
         private IAppDbContext? _appDbContext;
 
-        private ICommonFunctions? _commonFunctions;
+        private ICommonFunctions _commonFunctions;
 
         private int FileMaxAccessWait;
 
         private int SleepBetweenFileAccessAttempt;
 
-        ///// <summary>
-        /////     In C#, constructors of classes that implement interfaces must match the constructor signature defined by the interface. 
-        /////     Therefore, you cannot add additional parameters to the constructor in the implementing class that are not part of the interface.
-        ///// </summary>
-        /// <param name="aLogger"></param>
         public void Init(ILogger aLogger, IAppDbContext aAppDbContext, ICommonFunctions aCommonFunctions, int aFileMaxAccessWait, int aSleepBetweenFileAccessAttempt)
         {
-            _logger = aLogger ?? throw new ArgumentNullException(nameof(aLogger)); 
+            _logger = aLogger; 
 
             _appDbContext = aAppDbContext ?? throw new ArgumentNullException(nameof(aAppDbContext));
 
