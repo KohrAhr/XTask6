@@ -7,6 +7,7 @@ using Lib.DataTypes.EF;
 using System.Text.Json;
 using Lib.AppDb.Interfaces;
 using Lib.CommonFunctions;
+using Lib.CommonFunctions.Interfaces;
 
 namespace WorkerService_Observer
 {
@@ -14,6 +15,7 @@ namespace WorkerService_Observer
     {
         private readonly ILogger<WorkerObserver> _logger;
         private readonly IAppDbContext _appDbContext;
+        private readonly ICommonFunctions _commonFunctions;
         private IRabbitMQHelper _rabbitMQHelper;
 
         /// <summary>
@@ -31,11 +33,13 @@ namespace WorkerService_Observer
         ///     Constructor
         /// </summary>
         /// <param name="logger"></param>
-        public WorkerObserver(ILogger<WorkerObserver> logger, IRabbitMQHelper aRabbitMQHelper, IAppDbContext aAppDbContext)
+        public WorkerObserver(ILogger<WorkerObserver> logger, IRabbitMQHelper aRabbitMQHelper, IAppDbContext aAppDbContext, ICommonFunctions aCommonFunctions)
         {
             _logger = logger;
 
             _appDbContext = aAppDbContext;
+
+            _commonFunctions = aCommonFunctions;
 
             _rabbitMQHelper = aRabbitMQHelper;
             _rabbitMQHelper.SetLogger(_logger);
@@ -49,7 +53,7 @@ namespace WorkerService_Observer
         public override Task StartAsync(CancellationToken cancellationToken)
         {
             // Load settings
-            new Settings(_logger, new CommonFunctions()).ProceedConfigFile();
+            new Settings(_logger, _commonFunctions).ProceedConfigFile();
 
             // Only once settings has been loaded.
             _appDbContext.SetConnectionString(AppData.ConnectionString);
