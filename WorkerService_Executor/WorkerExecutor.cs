@@ -1,6 +1,7 @@
 using Lib.DataTypes;
 using Lib.DataTypes.EF;
-using WorkerService_Executor.EF;
+using Lib.AppDb.Interfaces;
+using WorkerService_Executor.Core;
 using WorkerService_Executor.Functions;
 using WorkerService_Executor.Interfaces;
 
@@ -10,25 +11,27 @@ namespace WorkerService_Executor
     {
         private readonly ILogger<WorkerExecutor> _logger;
         private ParseHelper parseHelper;
+        private readonly IAppDbContext _appDbContext;
 
-        private readonly AppDbContext appDbContext;
+//        private readonly AppDbContext _appDbContext;
 
-        public WorkerExecutor(ILogger<WorkerExecutor> logger)
+        public WorkerExecutor(ILogger<WorkerExecutor> logger, IAppDbContext aAppDbContext)
         {
             _logger = logger;
+            _appDbContext = aAppDbContext;
 
-            appDbContext = new AppDbContext();
-
-            parseHelper = new ParseHelper(_logger, appDbContext);
+            parseHelper = new ParseHelper(_logger, _appDbContext);
 
             // Load settings
             new Settings(_logger).ProceedConfigFile();
 
+            // Only once settings has been loaded.
+            _appDbContext.SetConnectionString(AppData.ConnectionString);
         }
 
         public override void Dispose()
         {
-            appDbContext.Dispose();
+            _appDbContext.Dispose();
 
             base.Dispose();
         }
@@ -46,7 +49,7 @@ namespace WorkerService_Executor
             // Update db -- Update Start Proceed Time
             // After first usage we we get Id
             TrackLog_Files? file;
-            file = appDbContext.TrackLog_Files.Where(x => x.TrackFileId == aMessage.TrackFileId && x.FileStartProceedTime == null).FirstOrDefault();
+            file = _appDbContext.TrackLog_Files.Where(x => x.TrackFileId == aMessage.TrackFileId && x.FileStartProceedTime == null).FirstOrDefault();
 
             if (file == null) 
             {
@@ -56,7 +59,7 @@ namespace WorkerService_Executor
 
             file.FileStartProceedTime = DateTime.Now;
 
-            appDbContext.SaveChanges();
+            _appDbContext.SaveChanges();
 
             // Proceed file
             try
@@ -74,7 +77,7 @@ namespace WorkerService_Executor
 
                     // Update End Proceed Time
                     // Ok, now we know Id and can use it
-                    file = appDbContext.TrackLog_Files.Where(x => x.TrackFileId == file.TrackFileId && x.FileStartProceedTime != null && x.FileFinishProceedTime == null).FirstOrDefault();
+                    file = _appDbContext.TrackLog_Files.Where(x => x.TrackFileId == file.TrackFileId && x.FileStartProceedTime != null && x.FileFinishProceedTime == null).FirstOrDefault();
 
                     if (file == null)
                     {
@@ -88,7 +91,7 @@ namespace WorkerService_Executor
                         file.OverallSuccessStatus = dataFileResult.Suceeded;
 
                         file.FileFinishProceedTime = DateTime.Now;
-                        appDbContext.SaveChanges();
+                        _appDbContext.SaveChanges();
                     }
                 }
             }

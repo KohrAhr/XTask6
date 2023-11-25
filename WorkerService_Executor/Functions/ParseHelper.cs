@@ -1,10 +1,9 @@
 ﻿using Lib.CommonFunctions;
 using Lib.DataTypes;
 using Lib.DataTypes.EF;
-using System;
 using System.Text.RegularExpressions;
 using WorkerService_Executor.Core;
-using WorkerService_Executor.EF;
+using Lib.AppDb.Interfaces;
 
 namespace WorkerService_Executor.Functions
 {
@@ -19,17 +18,17 @@ namespace WorkerService_Executor.Functions
 
         private ILogger _logger;
 
-        private readonly AppDbContext appDbContext;
+        private readonly IAppDbContext _appDbContext;
 
         /// <summary>
         ///     Constructor
         /// </summary>
         /// <param name="logger"></param>
-        public ParseHelper(ILogger logger, AppDbContext aAppDbContext) 
+        public ParseHelper(ILogger logger, IAppDbContext aAppDbContext) 
         { 
             _logger = logger;
 
-            appDbContext = aAppDbContext;
+            _appDbContext = aAppDbContext;
         }
 
         /// <summary>
@@ -196,8 +195,8 @@ namespace WorkerService_Executor.Functions
             IList<Data_IdentifiersDetails> identifiersDetailsList = new List<Data_IdentifiersDetails>();
 
             // Main entry
-            appDbContext.Data_Identifiers.Add(data_Identifiers);
-            appDbContext.SaveChanges();
+            _appDbContext.Data_Identifiers.Add(data_Identifiers);
+            _appDbContext.SaveChanges();
 
             // Addons (details)
             foreach(Box.Content item in aBox.Contents) 
@@ -214,8 +213,8 @@ namespace WorkerService_Executor.Functions
             }
 
             // Add all objects to the context in one go and save changes
-            appDbContext.Data_IdentifiersDetails.AddRange(identifiersDetailsList);
-            appDbContext.SaveChanges();
+            _appDbContext.Data_IdentifiersDetails.AddRange(identifiersDetailsList);
+            _appDbContext.SaveChanges();
         }
 
         private void ReportBadData(string aFileName, int aLineId, string aLineValue)

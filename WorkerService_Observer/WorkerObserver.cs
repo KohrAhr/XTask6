@@ -2,17 +2,17 @@ using Lib.DataTypes;
 using Lib.RabbitMQ.Interfaces;
 using RabbitMQ.Client;
 using WorkerService_Observer.Core;
-using WorkerService_Observer.EF;
 using WorkerService_Observer.Functions;
 using Lib.DataTypes.EF;
 using System.Text.Json;
+using Lib.AppDb.Interfaces;
 
 namespace WorkerService_Observer
 {
     public class WorkerObserver : BackgroundService
     {
         private readonly ILogger<WorkerObserver> _logger;
-
+        private readonly IAppDbContext _appDbContext;
         private IRabbitMQHelper _rabbitMQHelper;
 
         /// <summary>
@@ -30,13 +30,15 @@ namespace WorkerService_Observer
         ///     Constructor
         /// </summary>
         /// <param name="logger"></param>
-        public WorkerObserver(ILogger<WorkerObserver> logger, IRabbitMQHelper aRabbitMQHelper)
+        public WorkerObserver(ILogger<WorkerObserver> logger, IRabbitMQHelper aRabbitMQHelper, IAppDbContext aAppDbContext)
         {
             _logger = logger;
 
+            _appDbContext = aAppDbContext;
+
             _rabbitMQHelper = aRabbitMQHelper;
             _rabbitMQHelper.SetLogger(_logger);
-        }
+       }
 
         /// <summary>
         ///     Entry
@@ -48,6 +50,9 @@ namespace WorkerService_Observer
             // Load settings
             new Settings(_logger).ProceedConfigFile();
 
+            // Only once settings has been loaded.
+            _appDbContext.SetConnectionString(AppData.ConnectionString);
+
             // Init RabbitMQ pipeline
             try
             {
@@ -56,11 +61,10 @@ namespace WorkerService_Observer
             catch (Exception ex)
             {
                 // Problems with MQ Server
-                _logger.LogError(ex.Message);
+                _logger.LogError("Problems with MQ Server. Error is {ex.Message}", ex.Message);
 
                 Environment.Exit(3);
             }
-
 
             // Load settings from db
             _logger.LogInformation(
@@ -72,16 +76,13 @@ namespace WorkerService_Observer
             IList<Config_Folders>? folders = null;
             try
             {
-                using (AppDbContext context = new AppDbContext())
-                {
-                    folders = context.Config_Folders.Where(x => x.FolderIsActive == true && x.AssignToObserver == AppData.ScopeOfFolders).ToList();
-                }
+                folders = _appDbContext.Config_Folders.Where(x => x.FolderIsActive == true && x.AssignToObserver == AppData.ScopeOfFolders).ToList();
             }
             catch (Exception ex)
             {
                 // Problems with Db?
                 // TODO:
-                _logger.LogError(ex.Message);
+                _logger.LogError($"Cannot run DDL query. Error message is {ex.Message}", ex.Message);
 
                 Environment.Exit(2);
             }
@@ -180,20 +181,17 @@ namespace WorkerService_Observer
             // Make sure its not proceeded yet
             // Should we make assumption that all file names are unique?
             // Need to clarify specification from BA
-            using (AppDbContext context = new AppDbContext())
+            int result = _appDbContext.TrackLog_Files.Where(x => x.FileFullPath == aFile).Count();
+            if (result > 0)
             {
-                int result = context.TrackLog_Files.Where(x => x.FileFullPath == aFile).Count();
-                if (result > 0)
-                {
-                    // We did this file before?
+                // We did this file before?
 
-                    _logger.LogWarning("File {aFile} already in system.", aFile);
+                _logger.LogWarning("File {aFile} already in system.", aFile);
 
-                    // SHould be inform Operator?
+                // SHould be inform Operator?
 
-                    // Bye for now
-                    return;
-                }
+                // Bye for now
+                return;
             }
 
             // Setup new MS message
@@ -208,11 +206,8 @@ namespace WorkerService_Observer
                 FileFullPath = aFile
             };
 
-            using (AppDbContext context = new AppDbContext())
-            {
-                context.TrackLog_Files.Add(trackLog_Files);
-                context.SaveChanges();
-            }
+            _appDbContext.TrackLog_Files.Add(trackLog_Files);
+            _appDbContext.SaveChanges();
 
             message.TrackFileId = trackLog_Files.TrackFileId;
 
