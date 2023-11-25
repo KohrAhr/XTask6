@@ -1,3 +1,4 @@
+using Lib.CommonFunctions.Interfaces;
 using Lib.DataTypes;
 using Lib.RabbitMQ.Interfaces;
 using RabbitMQ.Client;
@@ -16,6 +17,8 @@ namespace WorkerService_Broker
 
         private readonly IRabbitMQHelper _rabbitMQHelper;
 
+        private readonly ICommonFunctions _commonFunctions;
+
         #region RabbitMQ
         private ConnectionFactory? factory = null;
         private IConnection? connection = null;
@@ -27,14 +30,17 @@ namespace WorkerService_Broker
         /// </summary>
         /// <param name="logger"></param>
         /// <param name="executorHost"></param>
-        public WorkerBroker(ILogger<WorkerBroker> logger, IHost executorHost, IRabbitMQHelper aRabbitMQHelper)
+        public WorkerBroker(ILogger<WorkerBroker> logger, IHost executorHost, IRabbitMQHelper aRabbitMQHelper, ICommonFunctions aCommonFunctions)
         {
             _logger = logger;
 
             _executorHost = executorHost;
 
             _rabbitMQHelper = aRabbitMQHelper;
-            aRabbitMQHelper.SetLogger(logger);
+            _rabbitMQHelper.SetLogger(_logger);
+
+            _commonFunctions = aCommonFunctions;
+            _commonFunctions.SetLogger(_logger);
         }
 
         /// <summary>
@@ -45,7 +51,7 @@ namespace WorkerService_Broker
         public override Task StartAsync(CancellationToken cancellationToken)
         {
             // Load settings
-            new Settings(_logger).ProceedConfigFile();
+            new Settings(_logger, _commonFunctions).ProceedConfigFile();
 
             // Init RabbitMQ pipeline
             try

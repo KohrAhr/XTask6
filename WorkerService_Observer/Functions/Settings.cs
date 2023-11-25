@@ -1,5 +1,4 @@
-﻿using Lib.CommonFunctions;
-using Lib.CommonFunctions.Interfaces;
+﻿using Lib.CommonFunctions.Interfaces;
 using WorkerService_Observer.Core;
 
 namespace WorkerService_Observer.Functions
@@ -8,13 +7,14 @@ namespace WorkerService_Observer.Functions
     {
         private readonly ILogger<WorkerObserver> _logger;
 
-        private readonly ICommonFunctions commonFunctions;
+        private readonly ICommonFunctions _commonFunctions;
 
-        public Settings(ILogger<WorkerObserver> logger) 
+        public Settings(ILogger<WorkerObserver> logger, ICommonFunctions aCommonFunctions) 
         {
             _logger = logger;
 
-            commonFunctions = new CommonFunctions(_logger);
+            _commonFunctions = aCommonFunctions;
+            _commonFunctions.SetLogger(_logger);
         }
 
         public void ProceedConfigFile()
@@ -22,18 +22,16 @@ namespace WorkerService_Observer.Functions
             IConfigurationRoot config = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json").Build();
 
             // #1
-            AppData.QueuePath = commonFunctions.ReadCriticalParameter(config, "QueuePath");
+            AppData.QueuePath = _commonFunctions.ReadCriticalParameter(config, "QueuePath");
 
             // #2
-            AppData.QueueServer = commonFunctions.ReadCriticalParameter(config, "QueueServer");
+            AppData.QueueServer = _commonFunctions.ReadCriticalParameter(config, "QueueServer");
 
-            AppData.ConnectionString = commonFunctions.ReadCriticalParameter(config, "ConnectionString");
+            AppData.ConnectionString = _commonFunctions.ReadCriticalParameter(config, "ConnectionString");
 
-            AppData.ScopeOfFolders = commonFunctions.ReadIntParameter(config, "ScopeOfFolders");
+            AppData.ScopeOfFolders = _commonFunctions.ReadIntParameter(config, "ScopeOfFolders");
 
-            AppData.EventRecycler = commonFunctions.ReadIntParameter(config, "EventRecycler", 30);
-
-//            AppData.MaxCountOfProceedProcesses = commonFunctions.ReadIntParameter(config, "MaxCountOfProceedProcesses");
+            AppData.EventRecycler = _commonFunctions.ReadIntParameter(config, "EventRecycler", 30);
         }
     }
 }

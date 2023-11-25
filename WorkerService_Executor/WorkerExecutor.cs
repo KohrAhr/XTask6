@@ -4,6 +4,7 @@ using Lib.AppDb.Interfaces;
 using WorkerService_Executor.Core;
 using WorkerService_Executor.Functions;
 using WorkerService_Executor.Interfaces;
+using Lib.CommonFunctions.Interfaces;
 
 namespace WorkerService_Executor
 {
@@ -13,17 +14,20 @@ namespace WorkerService_Executor
         private ParseHelper parseHelper;
         private readonly IAppDbContext _appDbContext;
 
-//        private readonly AppDbContext _appDbContext;
+        private readonly ICommonFunctions _commonFunctions;
 
-        public WorkerExecutor(ILogger<WorkerExecutor> logger, IAppDbContext aAppDbContext)
+        public WorkerExecutor(ILogger<WorkerExecutor> logger, IAppDbContext aAppDbContext, ICommonFunctions aCommonFunctions)
         {
             _logger = logger;
             _appDbContext = aAppDbContext;
 
-            parseHelper = new ParseHelper(_logger, _appDbContext);
+            _commonFunctions = aCommonFunctions;
+            _commonFunctions.SetLogger(_logger);
+
+            parseHelper = new ParseHelper(_logger, _appDbContext, _commonFunctions);
 
             // Load settings
-            new Settings(_logger).ProceedConfigFile();
+            new Settings(_logger, _commonFunctions).ProceedConfigFile();
 
             // Only once settings has been loaded.
             _appDbContext.SetConnectionString(AppData.ConnectionString);

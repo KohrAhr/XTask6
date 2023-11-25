@@ -1,5 +1,4 @@
-﻿using Lib.CommonFunctions;
-using Lib.CommonFunctions.Interfaces;
+﻿using Lib.CommonFunctions.Interfaces;
 using WorkerService_Broker.Core;
 
 namespace WorkerService_Broker.Functions
@@ -7,13 +6,14 @@ namespace WorkerService_Broker.Functions
     public class Settings
     {
         private readonly ILogger<WorkerBroker> _logger;
-        private readonly ICommonFunctions commonFunctions;
+        private readonly ICommonFunctions _commonFunctions;
 
-        public Settings(ILogger<WorkerBroker> logger) 
+        public Settings(ILogger<WorkerBroker> logger, ICommonFunctions aCommonFunctions) 
         {
             _logger = logger;
 
-            commonFunctions = new CommonFunctions(_logger);
+            _commonFunctions = aCommonFunctions;
+            _commonFunctions.SetLogger(_logger);
         }
 
         public void ProceedConfigFile()
@@ -21,10 +21,10 @@ namespace WorkerService_Broker.Functions
             IConfigurationRoot config = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json").Build();
 
             // #1
-            AppData.QueuePath = commonFunctions.ReadCriticalParameter(config, "QueuePath");
+            AppData.QueuePath = _commonFunctions.ReadCriticalParameter(config, "QueuePath");
 
             // #2
-            AppData.QueueServer = commonFunctions.ReadCriticalParameter(config, "QueueServer");
+            AppData.QueueServer = _commonFunctions.ReadCriticalParameter(config, "QueueServer");
         }
     }
 }

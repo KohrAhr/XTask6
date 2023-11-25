@@ -6,6 +6,7 @@ using WorkerService_Observer.Functions;
 using Lib.DataTypes.EF;
 using System.Text.Json;
 using Lib.AppDb.Interfaces;
+using Lib.CommonFunctions;
 
 namespace WorkerService_Observer
 {
@@ -48,7 +49,7 @@ namespace WorkerService_Observer
         public override Task StartAsync(CancellationToken cancellationToken)
         {
             // Load settings
-            new Settings(_logger).ProceedConfigFile();
+            new Settings(_logger, new CommonFunctions()).ProceedConfigFile();
 
             // Only once settings has been loaded.
             _appDbContext.SetConnectionString(AppData.ConnectionString);

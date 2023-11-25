@@ -6,11 +6,11 @@ namespace Lib.CommonFunctions
 {
     public class CommonFunctions : ICommonFunctions
     {
-        private readonly ILogger _logger;
+        private ILogger _logger;
 
-        public CommonFunctions(ILogger logger) 
+        public void SetLogger(ILogger aLogger)
         {
-            _logger = logger;
+            _logger = aLogger;
         }
 
         /// <summary>
@@ -53,7 +53,7 @@ namespace Lib.CommonFunctions
         {
             if (!File.Exists(aFilePath)) 
             {
-                _logger.LogInformation($"File \"{aFilePath}\" does not exist.");
+                _logger.LogInformation($"File \"{aFilePath}\" does not exist.", aFilePath);
                 return false;
             }
             

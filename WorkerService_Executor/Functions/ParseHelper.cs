@@ -1,9 +1,9 @@
-﻿using Lib.CommonFunctions;
-using Lib.DataTypes;
+﻿using Lib.DataTypes;
 using Lib.DataTypes.EF;
 using System.Text.RegularExpressions;
 using WorkerService_Executor.Core;
 using Lib.AppDb.Interfaces;
+using Lib.CommonFunctions.Interfaces;
 
 namespace WorkerService_Executor.Functions
 {
@@ -20,15 +20,20 @@ namespace WorkerService_Executor.Functions
 
         private readonly IAppDbContext _appDbContext;
 
+        private readonly ICommonFunctions _commonFunctions;
+
         /// <summary>
         ///     Constructor
         /// </summary>
         /// <param name="logger"></param>
-        public ParseHelper(ILogger logger, IAppDbContext aAppDbContext) 
+        public ParseHelper(ILogger logger, IAppDbContext aAppDbContext, ICommonFunctions aCommonFunctions) 
         { 
             _logger = logger;
 
             _appDbContext = aAppDbContext;
+
+            _commonFunctions = aCommonFunctions;
+            _commonFunctions.SetLogger(_logger);
         }
 
         /// <summary>
@@ -53,7 +58,7 @@ namespace WorkerService_Executor.Functions
             // Can we access data file?
 
             // File is accessible and exist
-            if (!new CommonFunctions(_logger).FileIsAccessible(aFileName, AppData.FileMaxAccessWait, AppData.SleepBetweenFileAccessAttempt))
+            if (!_commonFunctions.FileIsAccessible(aFileName, AppData.FileMaxAccessWait, AppData.SleepBetweenFileAccessAttempt))
             {
                 result.ErrorMessaget = "File is locked over limited time by another process or does not exist.";
                 return result;
