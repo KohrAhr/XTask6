@@ -1,10 +1,17 @@
-﻿using Lib.DataTypes;
+﻿using Lib.AppDb.Interfaces;
+using Lib.CommonFunctions.Interfaces;
+using Lib.DataTypes;
+using Microsoft.Extensions.Logging;
 
 namespace Lib.Parser.Interfaces
 {
     public interface IParserHelper
     {
-        void SetLimits(int aFileMaxAccessWait, int aSleepBetweenFileAccessAttempt);
+        void Init
+        (
+            ILogger aLogger, IAppDbContext aAppDbContext, ICommonFunctions aCommonFunctions,
+            int aFileMaxAccessWait, int aSleepBetweenFileAccessAttempt
+        );
 
         Task<DataFileResult> ProceedDataFile(string aFileName, Int64 aFileId);
 

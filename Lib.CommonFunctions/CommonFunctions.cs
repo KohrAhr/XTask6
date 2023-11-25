@@ -8,10 +8,6 @@ namespace Lib.CommonFunctions
     {
         private ILogger? _logger = null;
 
-        /// <summary>
-        ///     In C#, constructors of classes that implement interfaces must match the constructor signature defined by the interface. 
-        ///     Therefore, you cannot add additional parameters to the constructor in the implementing class that are not part of the interface.
-        /// </summary>
         public void SetLogger(ILogger aLogger)
         {
             _logger = aLogger ?? throw new ArgumentNullException(nameof(aLogger));

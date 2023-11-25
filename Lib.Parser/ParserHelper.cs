@@ -3,8 +3,8 @@ using Lib.DataTypes.EF;
 using System.Text.RegularExpressions;
 using Lib.AppDb.Interfaces;
 using Lib.CommonFunctions.Interfaces;
-using Microsoft.Extensions.Logging;
 using Lib.Parser.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace Lib.Parser
 {
@@ -17,21 +17,22 @@ namespace Lib.Parser
         private const string CONST_HEADER_STARTWITH = "HDR";
         private const string CONST_LINE_STARTWITH = "LINE";
 
-        private ILogger _logger;
+        private ILogger? _logger;
 
-        private readonly IAppDbContext _appDbContext;
+        private IAppDbContext? _appDbContext;
 
-        private readonly ICommonFunctions _commonFunctions;
+        private ICommonFunctions? _commonFunctions;
 
         private int FileMaxAccessWait;
 
         private int SleepBetweenFileAccessAttempt;
 
-        /// <summary>
-        ///     Constructor
-        /// </summary>
+        ///// <summary>
+        /////     In C#, constructors of classes that implement interfaces must match the constructor signature defined by the interface. 
+        /////     Therefore, you cannot add additional parameters to the constructor in the implementing class that are not part of the interface.
+        ///// </summary>
         /// <param name="aLogger"></param>
-        public ParserHelper(ILogger aLogger, IAppDbContext aAppDbContext, ICommonFunctions aCommonFunctions)
+        public void Init(ILogger aLogger, IAppDbContext aAppDbContext, ICommonFunctions aCommonFunctions, int aFileMaxAccessWait, int aSleepBetweenFileAccessAttempt)
         {
             _logger = aLogger ?? throw new ArgumentNullException(nameof(aLogger)); 
 
@@ -39,16 +40,7 @@ namespace Lib.Parser
 
             _commonFunctions = aCommonFunctions ?? throw new ArgumentNullException(nameof(aCommonFunctions));
             _commonFunctions.SetLogger(_logger);
-        }
 
-        /// <summary>
-        ///     In C#, constructors of classes that implement interfaces must match the constructor signature defined by the interface. 
-        ///     Therefore, you cannot add additional parameters to the constructor in the implementing class that are not part of the interface.
-        /// </summary>
-        /// <param name="aFileMaxAccessWait"></param>
-        /// <param name="aSleepBetweenFileAccessAttempt"></param>
-        public void SetLimits(int aFileMaxAccessWait, int aSleepBetweenFileAccessAttempt)
-        {
             FileMaxAccessWait = aFileMaxAccessWait;
             SleepBetweenFileAccessAttempt = aSleepBetweenFileAccessAttempt;
         }
@@ -98,7 +90,7 @@ namespace Lib.Parser
                             // Ok, log for all might be too expensive?
                             if (lineId % 1000000 == 0)
                             {
-                                _logger.LogInformation(
+                                _logger?.LogInformation(
                                     "File: \"{onlyFileName}\". Completed lines in file {lineId}. Total boxes saved {result.EntriesInFilesOK}", 
                                     onlyFileName, lineId, result.EntriesInFilesOK
                                 );
@@ -181,7 +173,7 @@ namespace Lib.Parser
                         }
 
                         // Leftovers 
-                        _logger.LogInformation(
+                        _logger?.LogInformation(
                             "File: \"{onlyFileName}\". Total lines in file {lineId}. Total boxes saved {result.EntriesInFilesOK}. Total failed boxes: {result.EntriesInFilesFailed}", 
                             onlyFileName, lineId, result.EntriesInFilesOK, result.EntriesInFilesFailed
                         );
@@ -195,7 +187,7 @@ namespace Lib.Parser
             {
                 result.ErrorMessaget = $"Exteption. Error message: {ex.InnerException}";
 
-                _logger.LogError("Exteption has occured. Data file is \"{aFileName}\". Error message: {ex.InnerException}", aFileName, ex.InnerException);
+                _logger?.LogError("Exteption has occured. Data file is \"{aFileName}\". Error message: {ex.InnerException}", aFileName, ex.InnerException);
 
                 result.Suceeded = false;
             }
@@ -217,8 +209,8 @@ namespace Lib.Parser
             IList<Data_IdentifiersDetails> identifiersDetailsList = new List<Data_IdentifiersDetails>();
 
             // Main entry
-            _appDbContext.Data_Identifiers.Add(data_Identifiers);
-            _appDbContext.SaveChanges();
+            _appDbContext?.Data_Identifiers.Add(data_Identifiers);
+            _appDbContext?.SaveChanges();
 
             // Addons (details)
             foreach(Box.Content item in aBox.Contents) 
@@ -235,13 +227,13 @@ namespace Lib.Parser
             }
 
             // Add all objects to the context in one go and save changes
-            _appDbContext.Data_IdentifiersDetails.AddRange(identifiersDetailsList);
-            _appDbContext.SaveChanges();
+            _appDbContext?.Data_IdentifiersDetails.AddRange(identifiersDetailsList);
+            _appDbContext?.SaveChanges();
         }
 
         public void ReportBadData(string aFileName, int aLineId, string aLineValue)
         {
-            _logger.LogWarning("File \"{aFileName}\" has failed at parsing. Unrecognized data. Issue in line {aLineId}, value \"{aLineValue}\"", aFileName, aLineId, aLineValue);
+            _logger?.LogWarning("File \"{aFileName}\" has failed at parsing. Unrecognized data. Issue in line {aLineId}, value \"{aLineValue}\"", aFileName, aLineId, aLineValue);
         }
 
         /// <summary>

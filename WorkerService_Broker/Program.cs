@@ -7,6 +7,9 @@ using Lib.AppDb.EF;
 using Lib.AppDb.Interfaces;
 using Lib.CommonFunctions;
 using Lib.CommonFunctions.Interfaces;
+using Lib.Parser.Interfaces;
+using Lib.Parser;
+
 
 IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>
@@ -18,6 +21,7 @@ IHost host = Host.CreateDefaultBuilder(args)
         services.AddTransient<IRabbitMQHelper, RabbitMQHelper>();
         services.AddTransient<IAppDbContext, AppDbContext>();
         services.AddTransient<ICommonFunctions, CommonFunctions>();
+        services.AddTransient<IParserHelper, ParserHelper>();
     })
     .Build();
 

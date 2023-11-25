@@ -27,12 +27,14 @@ namespace WorkerService_Executor
             // Load settings
             new Settings(_logger, _commonFunctions).ProceedConfigFile();
 
-            // Only once settings has been loaded.
+            _appDbContext = aAppDbContext;
+
             _parserHelper = aParserHelper;
-            _parserHelper.SetLimits(AppData.FileMaxAccessWait, AppData.SleepBetweenFileAccessAttempt);
 
             // Only once settings has been loaded.
-            _appDbContext = aAppDbContext;
+            _parserHelper.Init(_logger, _appDbContext, _commonFunctions, AppData.FileMaxAccessWait, AppData.SleepBetweenFileAccessAttempt);
+
+            // Only once settings has been loaded.
             _appDbContext.SetConnectionString(AppData.ConnectionString);
         }
 
