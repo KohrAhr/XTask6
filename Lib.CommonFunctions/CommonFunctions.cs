@@ -58,7 +58,7 @@ namespace Lib.CommonFunctions
         {
             if (!File.Exists(aFilePath)) 
             {
-                _logger.LogInformation($"File \"{aFilePath}\" does not exist.");
+                _logger.LogInformation("File \"{aFilePath}\" does not exist.", aFilePath);
                 return false;
             }
             
@@ -85,7 +85,7 @@ namespace Lib.CommonFunctions
                         return false;
                     }
 
-                    _logger.LogInformation($"File {aFilePath} is locked by another user.");
+                    _logger.LogInformation("File {aFilePath} is locked by another user.", aFilePath);
 
                     // Wait for a short period before trying again
                     Thread.Sleep(aSleepBetweenAttempt);
