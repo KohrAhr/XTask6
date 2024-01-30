@@ -1,34 +1,46 @@
 using Lib.DataTypes;
 using Lib.DataTypes.EF;
-using WorkerService_Executor.EF;
+using Lib.AppDb.Interfaces;
+using WorkerService_Executor.Core;
 using WorkerService_Executor.Functions;
 using WorkerService_Executor.Interfaces;
+using Lib.CommonFunctions.Interfaces;
+using Lib.Parser.Interfaces;
 
 namespace WorkerService_Executor
 {
     public class WorkerExecutor : BackgroundService, IWorkerExecutor, IDisposable
     {
         private readonly ILogger<WorkerExecutor> _logger;
-        private ParseHelper parseHelper;
+        private readonly IParserHelper _parserHelper;
+        private readonly IAppDbContext _appDbContext;
 
-        private readonly AppDbContext appDbContext;
+        private readonly ICommonFunctions _commonFunctions;
 
-        public WorkerExecutor(ILogger<WorkerExecutor> logger)
+        public WorkerExecutor(ILogger<WorkerExecutor> logger, IAppDbContext aAppDbContext, ICommonFunctions aCommonFunctions, IParserHelper aParserHelper)
         {
             _logger = logger;
 
-            appDbContext = new AppDbContext();
-
-            parseHelper = new ParseHelper(_logger, appDbContext);
+            _commonFunctions = aCommonFunctions;
+            _commonFunctions.SetLogger(_logger);
 
             // Load settings
-            new Settings(_logger).ProceedConfigFile();
+            new Settings(_logger, _commonFunctions).ProceedConfigFile();
 
+            _appDbContext = aAppDbContext;
+
+            _parserHelper = aParserHelper;
+
+            // Only once settings has been loaded.
+            _parserHelper.Init(_logger, _appDbContext, _commonFunctions, AppData.FileMaxAccessWait, AppData.SleepBetweenFileAccessAttempt);
+
+            // Only once settings has been loaded.
+            _appDbContext.SetConnectionString(AppData.ConnectionString);
         }
 
         public override void Dispose()
         {
-            appDbContext.Dispose();
+            _appDbContext.Dispose();
 
             base.Dispose();
         }
@@ -46,7 +58,7 @@ namespace WorkerService_Executor
             // Update db -- Update Start Proceed Time
             // After first usage we we get Id
             TrackLog_Files? file;
-            file = appDbContext.TrackLog_Files.Where(x => x.TrackFileId == aMessage.TrackFileId && x.FileStartProceedTime == null).FirstOrDefault();
+            file = _appDbContext.TrackLog_Files.Where(x => x.TrackFileId == aMessage.TrackFileId && x.FileStartProceedTime == null).FirstOrDefault();
 
             if (file == null) 
             {
@@ -56,12 +68,12 @@ namespace WorkerService_Executor
 
             file.FileStartProceedTime = DateTime.Now;
 
-            appDbContext.SaveChanges();
+            _appDbContext.SaveChanges();
 
             // Proceed file
             try
             {
-                dataFileResult = await parseHelper.ProceedDataFile(aMessage.FileName, aMessage.TrackFileId);
+                dataFileResult = await _parserHelper.ProceedDataFile(aMessage.FileName, aMessage.TrackFileId);
             }
             finally
             {
@@ -74,7 +86,7 @@ namespace WorkerService_Executor
 
                     // Update End Proceed Time
                     // Ok, now we know Id and can use it
-                    file = appDbContext.TrackLog_Files.Where(x => x.TrackFileId == file.TrackFileId && x.FileStartProceedTime != null && x.FileFinishProceedTime == null).FirstOrDefault();
+                    file = _appDbContext.TrackLog_Files.Where(x => x.TrackFileId == file.TrackFileId && x.FileStartProceedTime != null && x.FileFinishProceedTime == null).FirstOrDefault();
 
                     if (file == null)
                     {
@@ -88,7 +100,7 @@ namespace WorkerService_Executor
                         file.OverallSuccessStatus = dataFileResult.Suceeded;
 
                         file.FileFinishProceedTime = DateTime.Now;
-                        appDbContext.SaveChanges();
+                        _appDbContext.SaveChanges();
                     }
                 }
             }

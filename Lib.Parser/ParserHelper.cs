@@ -1,14 +1,14 @@
-﻿using Lib.CommonFunctions;
-using Lib.DataTypes;
+﻿using Lib.DataTypes;
 using Lib.DataTypes.EF;
-using System;
 using System.Text.RegularExpressions;
-using WorkerService_Executor.Core;
-using WorkerService_Executor.EF;
+using Lib.AppDb.Interfaces;
+using Lib.CommonFunctions.Interfaces;
+using Lib.Parser.Interfaces;
+using Microsoft.Extensions.Logging;
 
-namespace WorkerService_Executor.Functions
+namespace Lib.Parser
 {
-    public class ParseHelper
+    public class ParserHelper : IParserHelper
     {
         // TODO: Move them away
         private const string CONST_REGEX_HEADER = @"^HDR\s+(\S+)\s+(\S+)$";
@@ -17,19 +17,27 @@ namespace WorkerService_Executor.Functions
         private const string CONST_HEADER_STARTWITH = "HDR";
         private const string CONST_LINE_STARTWITH = "LINE";
 
-        private ILogger _logger;
+        private ILogger? _logger;
 
-        private readonly AppDbContext appDbContext;
+        private IAppDbContext? _appDbContext;
 
-        /// <summary>
-        ///     Constructor
-        /// </summary>
-        /// <param name="logger"></param>
-        public ParseHelper(ILogger logger, AppDbContext aAppDbContext) 
-        { 
-            _logger = logger;
+        private ICommonFunctions _commonFunctions;
 
-            appDbContext = aAppDbContext;
+        private int FileMaxAccessWait;
+
+        private int SleepBetweenFileAccessAttempt;
+
+        public void Init(ILogger aLogger, IAppDbContext aAppDbContext, ICommonFunctions aCommonFunctions, int aFileMaxAccessWait, int aSleepBetweenFileAccessAttempt)
+        {
+            _logger = aLogger; 
+
+            _appDbContext = aAppDbContext ?? throw new ArgumentNullException(nameof(aAppDbContext));
+
+            _commonFunctions = aCommonFunctions ?? throw new ArgumentNullException(nameof(aCommonFunctions));
+            _commonFunctions.SetLogger(_logger);
+
+            FileMaxAccessWait = aFileMaxAccessWait;
+            SleepBetweenFileAccessAttempt = aSleepBetweenFileAccessAttempt;
         }
 
         /// <summary>
@@ -54,7 +62,7 @@ namespace WorkerService_Executor.Functions
             // Can we access data file?
 
             // File is accessible and exist
-            if (!new CommonFunctions(_logger).FileIsAccessible(aFileName, AppData.FileMaxAccessWait, AppData.SleepBetweenFileAccessAttempt))
+            if (!_commonFunctions.FileIsAccessible(aFileName, FileMaxAccessWait, SleepBetweenFileAccessAttempt))
             {
                 result.ErrorMessaget = "File is locked over limited time by another process or does not exist.";
                 return result;
@@ -77,7 +85,7 @@ namespace WorkerService_Executor.Functions
                             // Ok, log for all might be too expensive?
                             if (lineId % 1000000 == 0)
                             {
-                                _logger.LogInformation(
+                                _logger?.LogInformation(
                                     "File: \"{onlyFileName}\". Completed lines in file {lineId}. Total boxes saved {result.EntriesInFilesOK}", 
                                     onlyFileName, lineId, result.EntriesInFilesOK
                                 );
@@ -160,7 +168,7 @@ namespace WorkerService_Executor.Functions
                         }
 
                         // Leftovers 
-                        _logger.LogInformation(
+                        _logger?.LogInformation(
                             "File: \"{onlyFileName}\". Total lines in file {lineId}. Total boxes saved {result.EntriesInFilesOK}. Total failed boxes: {result.EntriesInFilesFailed}", 
                             onlyFileName, lineId, result.EntriesInFilesOK, result.EntriesInFilesFailed
                         );
@@ -174,7 +182,7 @@ namespace WorkerService_Executor.Functions
             {
                 result.ErrorMessaget = $"Exteption. Error message: {ex.InnerException}";
 
-                _logger.LogError("Exteption has occured. Data file is \"{aFileName}\". Error message: {ex.InnerException}", aFileName, ex.InnerException);
+                _logger?.LogError("Exteption has occured. Data file is \"{aFileName}\". Error message: {ex.InnerException}", aFileName, ex.InnerException);
 
                 result.Suceeded = false;
             }
@@ -183,7 +191,7 @@ namespace WorkerService_Executor.Functions
         }
 
 
-        private void SaveBoxToDb(Box aBox, Int64 aFileId)
+        public void SaveBoxToDb(Box aBox, Int64 aFileId)
         {
             // Main entry
             Data_Identifiers data_Identifiers = new Data_Identifiers
@@ -196,8 +204,8 @@ namespace WorkerService_Executor.Functions
             IList<Data_IdentifiersDetails> identifiersDetailsList = new List<Data_IdentifiersDetails>();
 
             // Main entry
-            appDbContext.Data_Identifiers.Add(data_Identifiers);
-            appDbContext.SaveChanges();
+            _appDbContext?.Data_Identifiers.Add(data_Identifiers);
+            _appDbContext?.SaveChanges();
 
             // Addons (details)
             foreach(Box.Content item in aBox.Contents) 
@@ -214,13 +222,13 @@ namespace WorkerService_Executor.Functions
             }
 
             // Add all objects to the context in one go and save changes
-            appDbContext.Data_IdentifiersDetails.AddRange(identifiersDetailsList);
-            appDbContext.SaveChanges();
+            _appDbContext?.Data_IdentifiersDetails.AddRange(identifiersDetailsList);
+            _appDbContext?.SaveChanges();
         }
 
-        private void ReportBadData(string aFileName, int aLineId, string aLineValue)
+        public void ReportBadData(string aFileName, int aLineId, string aLineValue)
         {
-            _logger.LogWarning("File \"{aFileName}\" has failed at parsing. Unrecognized data. Issue in line {aLineId}, value \"{aLineValue}\"", aFileName, aLineId, aLineValue);
+            _logger?.LogWarning("File \"{aFileName}\" has failed at parsing. Unrecognized data. Issue in line {aLineId}, value \"{aLineValue}\"", aFileName, aLineId, aLineValue);
         }
 
         /// <summary>

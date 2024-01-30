@@ -6,11 +6,11 @@ namespace Lib.CommonFunctions
 {
     public class CommonFunctions : ICommonFunctions
     {
-        private readonly ILogger _logger;
+        private ILogger? _logger = null;
 
-        public CommonFunctions(ILogger logger) 
+        public void SetLogger(ILogger aLogger)
         {
-            _logger = logger;
+            _logger = aLogger ?? throw new ArgumentNullException(nameof(aLogger));
         }
 
         /// <summary>
@@ -28,7 +28,7 @@ namespace Lib.CommonFunctions
             if (string.IsNullOrEmpty(lValue))
             {
                 string err = $"{aParamName} cannot be empty";
-                _logger.LogCritical(err);
+                _logger?.LogCritical(err, aParamName);
                 throw new Exception(err);
             }
 
@@ -49,16 +49,11 @@ namespace Lib.CommonFunctions
             return lResult;
         }
 
-        //public IConfigurationRoot GetConfigFile()
-        //{
-        //    return new ConfigurationBuilder().AddConfiguration().JsonFile("appsettings.json").Build();
-        //}
-
         public bool FileIsAccessible(string aFilePath, int aMaxWaitTime = 120000, int aSleepBetweenAttempt = 500)
         {
             if (!File.Exists(aFilePath)) 
             {
-                _logger.LogInformation("File \"{aFilePath}\" does not exist.", aFilePath);
+                _logger?.LogInformation($"File \"{aFilePath}\" does not exist.", aFilePath);
                 return false;
             }
             
@@ -85,7 +80,7 @@ namespace Lib.CommonFunctions
                         return false;
                     }
 
-                    _logger.LogInformation("File {aFilePath} is locked by another user.", aFilePath);
+                    _logger?.LogInformation($"File {aFilePath} is locked by another user. Error message is: {ex.Message}", aFilePath, ex.Message);
 
                     // Wait for a short period before trying again
                     Thread.Sleep(aSleepBetweenAttempt);

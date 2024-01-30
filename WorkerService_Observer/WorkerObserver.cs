@@ -1,20 +1,22 @@
 using Lib.DataTypes;
-using Lib.RabbitMQ;
 using Lib.RabbitMQ.Interfaces;
 using RabbitMQ.Client;
 using WorkerService_Observer.Core;
-using WorkerService_Observer.EF;
 using WorkerService_Observer.Functions;
 using Lib.DataTypes.EF;
 using System.Text.Json;
+using Lib.AppDb.Interfaces;
+using Lib.CommonFunctions;
+using Lib.CommonFunctions.Interfaces;
 
 namespace WorkerService_Observer
 {
     public class WorkerObserver : BackgroundService
     {
         private readonly ILogger<WorkerObserver> _logger;
-
-        private IRabbitMQHelper rabbitMQHelper;
+        private readonly IAppDbContext _appDbContext;
+        private readonly ICommonFunctions _commonFunctions;
+        private readonly IRabbitMQHelper _rabbitMQHelper;
 
         /// <summary>
         ///     List of folders we are observe
@@ -31,12 +33,18 @@ namespace WorkerService_Observer
         ///     Constructor
         /// </summary>
         /// <param name="logger"></param>
-        public WorkerObserver(ILogger<WorkerObserver> logger)
+        public WorkerObserver(ILogger<WorkerObserver> logger, IRabbitMQHelper aRabbitMQHelper, IAppDbContext aAppDbContext, ICommonFunctions aCommonFunctions)
         {
             _logger = logger;
 
-            rabbitMQHelper = new RabbitMQHelper(_logger);
-        }
+            _appDbContext = aAppDbContext ?? throw new ArgumentNullException(nameof(aAppDbContext));
+
+            _commonFunctions = aCommonFunctions ?? throw new ArgumentNullException(nameof(aCommonFunctions));
+            _commonFunctions.SetLogger(_logger);
+
+            _rabbitMQHelper = aRabbitMQHelper ?? throw new ArgumentNullException(nameof(aRabbitMQHelper));
+            _rabbitMQHelper.SetLogger(_logger);
+       }
 
         /// <summary>
         ///     Entry
@@ -46,21 +54,23 @@ namespace WorkerService_Observer
         public override Task StartAsync(CancellationToken cancellationToken)
         {
             // Load settings
-            new Settings(_logger).ProceedConfigFile();
+            new Settings(_logger, _commonFunctions).ProceedConfigFile();
+
+            // Only once settings has been loaded.
+            _appDbContext.SetConnectionString(AppData.ConnectionString);
 
             // Init RabbitMQ pipeline
             try
             {
-                rabbitMQHelper.InitRabbitMQ(AppData.QueueServer, AppData.QueuePath, out factory, out connection, out channel);
+                _rabbitMQHelper.InitRabbitMQ(AppData.QueueServer, AppData.QueuePath, out factory, out connection, out channel);
             }
             catch (Exception ex)
             {
                 // Problems with MQ Server
-                _logger.LogError(ex.Message);
+                _logger.LogError("Problems with MQ Server. Error is {ex.Message}", ex.Message);
 
                 Environment.Exit(3);
             }
-
 
             // Load settings from db
             _logger.LogInformation(
@@ -72,16 +82,13 @@ namespace WorkerService_Observer
             IList<Config_Folders>? folders = null;
             try
             {
-                using (AppDbContext context = new AppDbContext())
-                {
-                    folders = context.Config_Folders.Where(x => x.FolderIsActive == true && x.AssignToObserver == AppData.ScopeOfFolders).ToList();
-                }
+                folders = _appDbContext.Config_Folders.Where(x => x.FolderIsActive == true && x.AssignToObserver == AppData.ScopeOfFolders).ToList();
             }
             catch (Exception ex)
             {
                 // Problems with Db?
                 // TODO:
-                _logger.LogError(ex.Message);
+                _logger.LogError($"Cannot run DDL query. Error message is {ex.Message}", ex.Message);
 
                 Environment.Exit(2);
             }
@@ -180,20 +187,17 @@ namespace WorkerService_Observer
             // Make sure its not proceeded yet
             // Should we make assumption that all file names are unique?
             // Need to clarify specification from BA
-            using (AppDbContext context = new AppDbContext())
+            int result = _appDbContext.TrackLog_Files.Where(x => x.FileFullPath == aFile).Count();
+            if (result > 0)
             {
-                int result = context.TrackLog_Files.Where(x => x.FileFullPath == aFile).Count();
-                if (result > 0)
-                {
-                    // We did this file before?
+                // We did this file before?
 
-                    _logger.LogWarning("File {aFile} already in system.", aFile);
+                _logger.LogWarning("File {aFile} already in system.", aFile);
 
-                    // SHould be inform Operator?
+                // SHould be inform Operator?
 
-                    // Bye for now
-                    return;
-                }
+                // Bye for now
+                return;
             }
 
             // Setup new MS message
@@ -203,14 +207,13 @@ namespace WorkerService_Observer
             };
 
             // Add entry into db table Files
-            TrackLog_Files trackLog_Files = new TrackLog_Files();
-            trackLog_Files.FileFullPath = aFile;
-
-            using (AppDbContext context = new AppDbContext())
+            TrackLog_Files trackLog_Files = new TrackLog_Files
             {
-                context.TrackLog_Files.Add(trackLog_Files);
-                context.SaveChanges();
-            }
+                FileFullPath = aFile
+            };
+
+            _appDbContext.TrackLog_Files.Add(trackLog_Files);
+            _appDbContext.SaveChanges();
 
             message.TrackFileId = trackLog_Files.TrackFileId;
 
@@ -219,7 +222,7 @@ namespace WorkerService_Observer
 
             // Send message to MSMQ/RabbitMQ
             string rawMessage = JsonSerializer.Serialize(message);
-            rabbitMQHelper?.SendMessage(channel, AppData.QueuePath, rawMessage);
+            _rabbitMQHelper?.SendMessage(channel, AppData.QueuePath, rawMessage);
 
         }
 
@@ -227,16 +230,12 @@ namespace WorkerService_Observer
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-//                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                //                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
 
                 // Self repair ? or to overflow ?
 
                 // Recycle events?
-                foreach (FileSystemWatcher watcher in fileSystemWatchers)
-                {
-                    watcher.EnableRaisingEvents = false;
-                    watcher.EnableRaisingEvents = true;
-                }
+                RecycleEvents(fileSystemWatchers);
 
                 try
                 {
@@ -247,6 +246,15 @@ namespace WorkerService_Observer
                     // What we can do?
                     _logger.LogError("Exception on Task cancellation. {ex.Message}", ex.Message);
                 }
+            }
+        }
+
+        private void RecycleEvents(List<FileSystemWatcher> aWatchedFolders)
+        {
+            foreach (FileSystemWatcher watcher in aWatchedFolders)
+            {
+                watcher.EnableRaisingEvents = false;
+                watcher.EnableRaisingEvents = true;
             }
         }
     }

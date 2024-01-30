@@ -1,5 +1,5 @@
+using Lib.CommonFunctions.Interfaces;
 using Lib.DataTypes;
-using Lib.RabbitMQ;
 using Lib.RabbitMQ.Interfaces;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -15,7 +15,9 @@ namespace WorkerService_Broker
         private readonly ILogger<WorkerBroker> _logger;
         private readonly IHost _executorHost;
 
-        private readonly IRabbitMQHelper rabbitMQHelper;
+        private readonly IRabbitMQHelper _rabbitMQHelper;
+
+        private readonly ICommonFunctions _commonFunctions;
 
         #region RabbitMQ
         private ConnectionFactory? factory = null;
@@ -28,13 +30,17 @@ namespace WorkerService_Broker
         /// </summary>
         /// <param name="logger"></param>
         /// <param name="executorHost"></param>
-        public WorkerBroker(ILogger<WorkerBroker> logger, IHost executorHost)
+        public WorkerBroker(ILogger<WorkerBroker> logger, IHost executorHost, IRabbitMQHelper aRabbitMQHelper, ICommonFunctions aCommonFunctions)
         {
             _logger = logger;
 
             _executorHost = executorHost;
 
-            rabbitMQHelper = new RabbitMQHelper(logger);
+            _rabbitMQHelper = aRabbitMQHelper;
+            _rabbitMQHelper.SetLogger(_logger);
+
+            _commonFunctions = aCommonFunctions;
+            _commonFunctions.SetLogger(_logger);
         }
 
         /// <summary>
@@ -45,12 +51,12 @@ namespace WorkerService_Broker
         public override Task StartAsync(CancellationToken cancellationToken)
         {
             // Load settings
-            new Settings(_logger).ProceedConfigFile();
+            new Settings(_logger, _commonFunctions).ProceedConfigFile();
 
             // Init RabbitMQ pipeline
             try
             {
-                rabbitMQHelper.InitRabbitMQ(AppData.QueueServer, AppData.QueuePath, out factory, out connection, out channel);
+                _rabbitMQHelper.InitRabbitMQ(AppData.QueueServer, AppData.QueuePath, out factory, out connection, out channel);
             }
             catch (Exception ex)
             {
@@ -78,7 +84,7 @@ namespace WorkerService_Broker
         /// <param name="e"></param>
         private void Consumer_Received(object? sender, BasicDeliverEventArgs e)
         {
-            string result = rabbitMQHelper.GetMessage(e);
+            string result = _rabbitMQHelper.GetMessage(e);
 
             if (String.IsNullOrEmpty(result)) 
             {

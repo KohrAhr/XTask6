@@ -1,14 +1,19 @@
-using Lib.RabbitMQ;
 using Lib.RabbitMQ.Interfaces;
+using Lib.RabbitMQ;
 using WorkerService_Observer;
-using WorkerService_Observer.EF;
+using Lib.AppDb.Interfaces;
+using Lib.AppDb.EF;
+using Lib.CommonFunctions;
+using Lib.CommonFunctions.Interfaces;
 
 IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>
     {
-        services.AddDbContext<AppDbContext>();
-        services.AddTransient<RabbitMQHelper>();
         services.AddHostedService<WorkerObserver>();
+
+        services.AddTransient<IRabbitMQHelper, RabbitMQHelper>();
+        services.AddTransient<IAppDbContext, AppDbContext>();
+        services.AddTransient<ICommonFunctions, CommonFunctions>();
     })
     .Build();
 
